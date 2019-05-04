@@ -1,0 +1,107 @@
+#!/bin/bash
+# Common shell script library
+# Author: jdum
+# Date: 30 avril 2019
+# Version 1.1
+# Add _mdbg
+
+# returns date formated string -----------------------------------------
+_getDateLine()
+{
+	echo -ne "[$(date +"%m-%d-%Y")][$(date +"%T")]"
+}
+# Display msg with color tags OK, NOK ,INFO ----------------------------
+_displayColorTag()
+{
+	  logfile=/tmp/$(basename ${0}).log
+    tag="${1}"
+    text="${2}"
+    # color codes list
+		declare -A COLORS=( ["black"]="30" ["red"]="31" ["green"]="32" ["brown_orange"]="33" ["blue"]="34" ["purple"]="35"  ["cyan"]="36" ["light_gray"]="37")
+#Dark Gray     1;30
+#Light Red     1;31
+#Light Green   1;32
+#Yellow        1;33
+#Light Blue    1;34
+#Light Purple  1;35
+#Light Cyan    1;36
+#White         1;37
+	# escape sequence
+	 esc_start="\033["
+	esc_end="\033[0m"
+	# char formating
+	bold=';1'
+	underlined=4
+	flashing=1
+
+     case ${tag} in
+     NOK)  color=${COLORS["red"]}
+           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
+     ;;
+     OK)   color=${COLORS["green"]}
+           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
+     ;;
+     INFO) color=${COLORS["brown_orange"]}
+           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
+     ;;
+		 DEBUG) color=${COLORS["blue"]}
+		 				echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
+     ;;
+
+     *)  tag="Unsupported colored case tag"
+		 echo -ne "$(_getDateLine)[${esc_start}${red};${red}${bold}m${tag}${esc_end}]" | tee --append $logfile
+     ;;
+     esac
+     echo | tee --append $logfile
+}
+# Return a time stamp  -----------------------------------------
+_getTimeStamp()
+{
+
+ echo -ne $(date +"%Y%m%d%H%M%S")
+
+}
+#- wrapper methods  -----------------------------------------
+
+_mok()
+{
+	_displayColorTag OK  "${1}"
+}
+_mnok()
+{
+	_displayColorTag NOK  "${1}"
+}
+_minf()
+{
+	_displayColorTag INFO  "${1}"
+}
+_mdbg()
+{
+	[ "$DEBUG" == "1" ] && _displayColorTag DEBUG  "${1}"
+}
+
+# Set logging ------------------------------------------
+_setLogging()
+{
+  logfile=/tmp/$(basename ${0}).log
+  timestamp=$(_getTimeStamp)
+  [ -f ${logfile} ] && mv ${logfile} "${logfile}.$(_getTimeStamp)" && _minf "logfile ${logfile} is backuped in ${logfile}.$timestamp"
+  echo "# $(_getDateLine) $(basename $0) logging started"> ${logfile}
+}
+#---------------------------------------------------
+#---------------------------------------------------
+#- testing  -----------------------------------------
+if [ "$1" = "-t" ]
+then
+	_mok lallala
+	_mnok lllllll
+	_minf iiiii
+	_getDateLine
+	 echo
+	 _setLogging
+	 echo
+fi
+_upperCase()
+{
+echo ${1}|dd conv=ucase 2>/dev/null
+}

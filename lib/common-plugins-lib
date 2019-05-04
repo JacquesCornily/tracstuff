@@ -1,0 +1,96 @@
+#!/bin/bash
+# Common methode to install and configure a trac plugin library
+# Author: jdum
+# Date: 30 avril 2019
+# Version 1.1
+#-----------------------------------------------------------------------------------------------
+# Configure the trac.ini logo
+#
+#-----------------------------------------------------------------------------------------------
+# Configure specific plugins
+# Once the trac project is generated
+# Wrapper
+
+_setTracIniPlugin()
+{
+  pluginName=$1
+  found=0
+   _mdbg "Enter _setTracIniPlugin"
+   _minf "Configure $pluginName with trac-admin"
+    sudo chown apache:apache $TRAC_INI
+    for methodHandler in ${!METHODS_PLUGINS[@]}
+    do
+      _mdbg "compare ${methodHandler} with ${pluginName}"
+      if [ "${methodHandler}" == "${pluginName}" ]
+      then
+            _mdbg "$pluginName will be be processed by ${METHODS_PLUGINS["${methodHandler}"]} methode"
+
+            ${METHODS_PLUGINS["${methodHandler}"]}
+            _installPluginPackage  "${pluginName}"
+            found=1
+      fi
+    done
+    [ "${found}" == "0" ] && _mnok "Invalid plugin name $pluginName found=$found"
+    _mdbg "Leave _setTracIniPlugin"
+}
+#-----------------------------------------------------------------------------------------------
+_backupTracIni() #
+{
+   _minf "Backup $TRAC_INI"
+   timeStamp=$(_getTimeStamp)
+   tracIniCopy=${TRAC_INI}.${timeStamp}
+   sudo cp ${TRAC_INI} ${tracIniCopy}           || _mnok " Pb copying  ${TRAC_INI} -> ${tracIniCopy}"
+   _mok "Made a copy of trac.ini in ${tracIniCopy}"
+   sudo chmod 666 ${tracIniCopy}               && _mdbg "Change to 666 permission for ${tracIniCopy}"
+
+}
+#------------------------------------------------------------------------------------------------
+#
+#
+_installPluginPackage()
+{
+  pluginName=$1
+  installType="easyinstall"
+  #[ "$2" != "" ] &&  installType=$2
+  _mdbg "Enter _installPluginPackage"
+  _mdbg "$pluginName install with $installType"
+  cd ${PROJECT_DIR}/plugins
+  case  ${installType} in
+    easyinstall)  _mdbg "From $(pwd) will perform an $installType"
+                  sudo easy_install -U -Z  ${PLUGINS_URL["${pluginName}"]}   &&  _mok "$installType installed $pluginName"
+    ;;
+    svn) _mdbg "From $(pwd) will perform an $installType"
+         sudo mkdir $installType &&  _minf "Create plugin $installType plugin repo"
+         _mdbg "From $(pwd) will perform an $installType co"
+         svn co ${PLUGINS_URL["${pluginName}"]} && _mok "$pluginName svn repo co"
+         setupPath=$(find . -name setup.py)
+         _mdbg "Warning setupPath=$setupPath"
+         cd $(dirname $setupPath)
+         _mdbg "Lauchning setup.py from $(pwd)"
+         _mdbg "From $(pwd) will perform : python setup.py install"
+         sudo python setup.py install && _mok "${pluginName} installed the $installType way"
+
+    ;;
+    pip) _mdbg "pip install"
+    ;;
+  esac
+  _mdbg "Leave _installPluginPackage"
+
+}
+
+#-----------------------------------------------------------------------------------------------
+# ADD settings key+value in a section to the trac.ini bellow a section
+# using a source file and putting the modification in the destination file_
+_setOptionInTracIniSection()
+{
+DEBUG=0
+ section="$1"    # e.g [components]
+ key="$2"        # key = value
+ value=$3
+ _mdbg "Enter _setOptionInTracIniSection"
+ _mdbg "$section $key $value to add to trac.ini"
+  sudo trac-admin ${PROJECT_DIR} config set "$section" "$key" "$value" && _mok "trac.ini modified with $key=$value added in $section"
+ _mdbg " Leave _setOptionInTracIniSection"
+ DEBUG=1
+}
+#-----------------------------------------------------------------------------------------------

@@ -1,0 +1,132 @@
+#!/bin/bash
+# Change URL path
+# Author jdum
+# Generation of a trac project
+# version 0.7.1
+#
+# Changed URL path
+# Clean up of previous trac project
+# Add path global variables
+# Add backup script on dum2
+# Change path for test.conf
+# Change realm warning AuthName must the same as the realm
+# Add httpd project conf file genereric
+# Add debug
+# Add multiple users with trac permitions
+# Add ticadmincustomfield
+# Major code cleanup
+# Add ExtraWiki plugin
+# default values for tickets
+# 0.7 add wikitopdf
+# 0.7 add breadcrumbsnav
+# 0.7 add tractags
+#### 0.7 add graphviz
+# 0.7 change trac style
+# 0.7 add parsing command line paramters
+# 0.7 import/export ticket and wiki
+# 0.8 more custom
+# 0.8 bash error handling
+# 0.8 level of debug and clearer messages
+# 0.8 install speed up
+# 0.8 mod_python
+# 0.8 eggs in plugin dir
+
+[ "$1" == "" ] && _mnok "Project name missing as argument" && exit 3
+DEBUG=1
+FAST_CONFIG=1    # 1 Skip package installation
+PROJECT=$1
+TRAC_DIR=/var/lib/trac
+PROJECT_DIR=${TRAC_DIR}/${PROJECT}
+PROJECT_URL="http://$(uname -n)/${PROJECT}/"
+HTML_TRAC_DIR=/var/www/html/trac
+HTML_PROJECT_DIR=${HTML_TRAC_DIR}/${PROJECT}
+REALM=$(uname -n)
+TRAC_INI=${PROJECT_DIR}/conf/trac.ini
+TMP_TRAC_INI=/tmp/trac.tmp
+TMP_SRC_INDEX=0                                 # index_of the tempory file, must be increase of 1 , a new on is generated
+LOGO_FILE="${HOME}/tools/misc/${PROJECT}.png"
+LIB_DIR=${HOME}/tools/lib
+PYTHON_EGGS_DIR="/usr/lib/python2.7/site-packages"
+TRACLOG_FILE=${PROJECT_DIR}/log/${PROJECT}.log
+declare -A USERS=( [admin]="admin" [jdum]="123password" [ronan]="guerin" )
+
+GEN_FLAG=1                 # proceed to the trac generation project
+CUSTOMIZATION_FLAG=1      # customization of the trac project
+PLUGINS_FLAG=1             # configure plugins or not
+
+#.------------------------------------------------------------------
+#--MAIN-------------------------------------------------------------
+#-------------------------------------------------------------------
+declare -a libraries=( "common-lib" "common-gen-lib" "common-custom-lib" "common-plugins-lib"  "plugins-lib")
+
+for lib in ${libraries[@]}
+do
+  echo "Import library: $lib"
+  [ -f ${LIB_DIR}/${lib} ]  && source ${LIB_DIR}/${lib}           # import shell library
+done
+
+_setLogging                  # Initialize the logging
+sudo chown apache:apache ${TRACLOG_FILE} # Adapt trac log file ownership
+[ "$1" == "" ]        && _mnok " No project argument " && exit 3
+
+if [ "${GEN_FLAG}" == "1" ]
+then
+   _minf "Starting ${PROJECT} generation ---------------------------------------------------"
+      sudo yum remove -y trac 2>&1 | tee --append $LOG_FILE >/dev/null && _minf "trac is removed"
+    _removeAllEggs
+    [ -d ${PROJECT_DIR} ] && sudo rm -rf ${PROJECT_DIR} && _minf "Remove previous $PROJECT"
+
+    _install_trac                # Package installation
+    sudo systemctl stop httpd
+    sudo easy_install --upgrade Trac         && _minf "Trac upgrade"
+    _create_project              # Generate the trac project and configure user's project
+
+    sudo trac-admin ${PROJECT_DIR} upgrade   && _mok "Trac upgrade on $PROJECT_DIR"
+    sudo systemctl restart httpd
+fi
+
+# Customize core trac
+if [ "${CUSTOMIZATION_FLAG}" == "1" ]
+then
+  _minf "Starting ${PROJECT} customization ---------------------------------------------------"
+  for customMethod in "${CUSTOM_METHODS[@]}"
+  do
+    _minf "method ${customMethod} available"
+  done
+  sleep 5
+  sudo systemctl stop httpd.service && _mok "httpd Web server stopped" && _mok "Apache stopped"
+  _mdbg "Trac project $PROJECT customization"
+  _backupTracIni
+  # _setTracLogging
+   for customMethod in "${CUSTOM_METHODS[@]}"
+   do
+      _mdbg "Using ${customMethod} for customization"
+      ${customMethod} && _mok "Custom method is ${customMethod}"
+  done
+  sudo chown apache:apache $TRAC_INI && sudo sudo chmod 666 $TRAC_INI
+  sudo systemctl start httpd.service && _mok "httpd Web server started" && _mok "Apache restarted"
+fi
+# Begin plugin configuration ----------------------------------------------------------------
+#
+if [ "${PLUGINS_FLAG}" == "1" ]
+then
+  _minf "Starting ${PROJECT} plugins installation and configuration -----------------------------"
+  sudo systemctl stop httpd && _mok "httpd Web server stopped" && _mok "Apache stopped"
+  _backupTracIni
+  for plugin in ${SUPPORTED_PLUGINS[@]}
+  do
+  _setTracIniPlugin "$plugin" &&  _mdbg "_setTracIniPlugin $plugin"
+  done
+  sudo systemctl start httpd  && _mok "httpd Web server started" && _mok "Apache restarted"
+fi
+
+
+
+#sudo systemctl stop httpd
+
+#_setTicketMilestones
+#sudo systemctl stop httpd
+sudo chown apache:apache $TRACLOG_FILE
+_mok "$(_upperCase $PROJECT) generation complete, you can access it at : $PROJECT_URL"
+
+exit 0

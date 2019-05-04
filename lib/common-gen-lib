@@ -1,0 +1,131 @@
+#!/bin/bash
+#
+# Methods to generate a trac project
+#
+# Install necessary package to run trac
+PACKAGES=( "epel-release" "expect" "svn" "trac mod_wsgi" "htmldoc" "enscript" "graphviz" "python-pip")
+_removeAllEggs()
+{
+  _mdbg "Enter _removeAllEggs"
+  egg_registry="easy-install.pth"
+  if [ -d ${PYTHON_EGGS_DIR} ]
+  then
+    cd ${PYTHON_EGGS_DIR}
+    pwd
+
+    sudo find . -name "*egg" -type f -print | sudo xargs rm -rf
+    sudo find . -name "*egg" -type d -print | sudo xargs rm -rf
+    sudo find . -name TracTags-0.10.dist-info | sudo xargs rm -rf # hack
+
+  fi
+  if [ -f ${PYTHON_EGGS_DIR}/${egg_registry} ]
+  then
+       ls -l ${egg_registry}
+       sudo grep -v '.egg' ${PYTHON_EGGS_DIR}/${egg_registry} > /tmp/${egg_registry} && _mdbg "${egg_registry} cleaned up"
+       sudo cp /tmp/${egg_registry} ${PYTHON_EGGS_DIR}/${egg_registry}
+  fi
+  _mdbg "Leave _removeAllEggs"
+  cd
+}
+_install_trac()
+{
+ _minf "install_trac ......"
+ if [ "${FAST_CONFIG}" == "0" ]
+ then
+
+  for pkg in ${PACKAGES[@]}
+  do
+      _minf "Will install $pkg"
+      sudo yum install -y $pkg 2>&1 | tee --append $LOG_FILE >/dev/null && _minf "$pkg is installed"
+  done
+ fi
+
+  type pip 2>&1 >/dev/null || pip install --upgrade pip
+
+  sudo firewall-cmd --add-service=http --permanent
+  sudo firewall-cmd --reload
+
+  sudo setsebool -P httpd_unified on
+
+  [ ! -d ${TRAC_DIR} ]      && sudo mkdir ${TRAC_DIR}
+  [ ! -d ${HTML_TRAC_DIR} ] && sudo mkdir ${HTML_TRAC_DIR}
+
+  sudo chown -R apache:apache ${HTML_TRAC_DIR}
+}
+
+TMP=$(mktemp -t linux-trac.sh.XXXXXX)
+trap "rm $TMP* 2>/dev/null" 0
+#-----------------------------------------------------------------------------------------------
+# Register users with apache and trac project
+_create_digest()
+{
+  _minf "_create_digest $(echo ${PROJECT}|tr [a-z] [A-Z])  ......"
+  filename=$1
+  realm=$2
+  username=$3
+  password=$4
+  options=
+
+	_mdbg "filename = $filename"
+	_mdbg "realm    = $realm"
+	_mdbg "username = $username"
+	_mdbg "password = $password"
+
+  if [ ! -f ${filename} ]; then
+    options=-c
+  fi
+
+  cat <<EOF > ${TMP}
+set timeout -1
+spawn sudo htdigest ${options} ${filename} ${realm} ${username}
+expect "New password: "
+send "${password}\n"
+expect "Re-type new password: "
+send "${password}\n"
+expect eof
+EOF
+  expect ${TMP}
+}
+#-----------------------------------------------------------------------------------------------
+# Generate the trac PROJECT
+_create_project()
+{
+  _minf "create_project  $(_upperCase $PROJECT)"
+
+  sudo rm -rf ${PROJECT_DIR} ${HTML_TRAC_DIR}/${PROJECT} && _mok "Old $PROJECT cleaned"
+
+  sudo trac-admin ${PROJECT_DIR} initenv ${PROJECT} sqlite:db/trac.db && _mok "$PROJECT has been generated"
+  sudo trac-admin ${PROJECT_DIR} deploy ${HTML_TRAC_DIR}/${PROJECT}   && _mok "$PROJECT has been deployed"
+  sudo chown -R apache:apache ${PROJECT_DIR}                          && _mok " Change ownership with apache:apache to the whole ${PROJECT_DIR}"
+  sudo chown -R apache:apache ${HTML_TRAC_DIR}/${PROJECT}
+
+  sudo chcon -R -t httpd_sys_content_t ${PROJECT_DIR}
+  for user in "${!USERS[@]}"
+  do
+	  _mdbg "user $user set with this password (${USERS[$user]})"
+  	_create_digest ${PROJECT_DIR}/.htdigest "${REALM}" ${user} ${USERS[$user]}
+  done
+  for uadmin in admin jdum
+  do
+  	sudo trac-admin ${PROJECT_DIR} permission add $uadmin TRAC_ADMIN && _mok "$uadmin with TRAC_ADMIN"
+  done
+# Changed to make it generic
+sudo su -c ' sudo cat <<EOF > /tmp/xxxx.conf
+WSGIScriptAlias /test /var/www/html/trac/test/cgi-bin/trac.wsgi
+<Location /test>
+  AuthType Digest
+  AuthName "test"
+  AuthUserFile /var/lib/trac/test/.htdigest
+  Require valid-user
+</Location>
+EOF
+'
+  _mdbg "After su command.."
+
+  sudo cat /tmp/xxxx.conf |  sed "s/\/test/\/${PROJECT}/g" |sed "s/test/${REALM}/g" > /tmp/_xxxx.conf
+  sudo cp /tmp/_xxxx.conf  /etc/httpd/conf.d/${PROJECT}.conf
+# En changes
+  [ -f /etc/httpd/conf.d/${PROJECT}.conf ] && _mok "Configuration file generated"
+  [ ${DEBUG} == "1" ] && cat /etc/httpd/conf.d/${PROJECT}.conf
+
+}

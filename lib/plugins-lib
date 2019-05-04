@@ -1,0 +1,220 @@
+
+#!/bin/bash
+#
+# Methods to configure a plugin in trac.ini
+#
+#--------------------------------------------------------------------------------------------------------
+#
+declare -a SUPPORTED_PLUGINS=( "customfieldadmin" "wikiextras" "wikitopdf" "breadcrumbsnav" "tags" "stractistics") # graphviz has benn disabled
+
+declare -A METHODS_PLUGINS=(["customfieldadmin"]="_configureCustomFieldAdmin" ["wikiextras"]="_configureWikiExtras" \
+                            ["wikitopdf"]="_configureWikiToPdf" ["breadcrumbsnav"]="_configureBreadCrumsNav" \
+                            ["tags"]="_configureTags" ["graphviz"]="_configureGraphviz" ["stractistics"]="_configureStractistics" )
+
+declare -A PLUGINS_URL=(["customfieldadmin"]="https://trac-hacks.org/svn/customfieldadminplugin/0.11" \
+                        ["wikiextras"]="https://trac-hacks.org/svn/wikiextrasplugin/trunk" \
+                        ["wikitopdf"]="https://trac-hacks.org/svn/tracwikitopdfplugin/0.11" \
+                        ["breadcrumbsnav"]="https://trac-hacks.org/svn/breadcrumbsnavplugin/trunk" \
+                        ["tags"]="https://trac-hacks.org/svn/tagsplugin" \
+                        ["graphviz"]="https://trac-hacks.org/svn/graphvizplugin/trunk" \
+                        ["stractistics"]="https://trac-hacks.org/svn/stractisticsplugin" \
+                        )
+                        #
+_configureStractistics()
+{
+    declare -a newSections=( "components" "stractistics") # New section
+    declare -a pluginEnablingOptionValues=('stractistics.web_ui.*' "enabled") # array
+    declare -A stractistics=(["repository_authors_limit"]="5" ["wiki_authors_limit"]="7" )
+
+    _minf "Enable stractistics"
+    sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+    _mok "tracadmin ${newSections[1]} is enabled in components"
+    newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+    _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+
+    # Set a a new section in trac.ini
+    _minf "Configure customfieldadmin"
+    for option in ${!stractistics[*]}
+    do
+        _minf "[${newSections[1]}] add $option = ${stractistics["$option"]} in trac.ini"      # Keep previous index logic
+        _setOptionInTracIniSection "${newSections[1]}" "$option" "${stractistics[$option]}"
+    done
+}
+_configureGraphviz()
+{
+  declare -a newSections=( "components" "graphviz") # New section
+  declare -a pluginEnablingOptionValues=('graphviz.*' "enabled") # array
+  declare -A graphviz=(["cache_dir"]="/tmp/trac/htdocs/graphviz" ["png_antialias"]='true' ["default_graph_fontname"]="Andale Mono" \
+                       ["default_graph_fontsize"]="12" ["cache_manager"]="yes" ["cache_max_size"]="10000000" ["cache_min_size"]="5000000" \
+                       ["cache_max_count"]="2000" ["cache_min_count"]="1500")
+  #declare -A tags=(["ignore_closed_tickets"]="true" ["ticket_fields"]='component, keywords, milestone' ["revisable_realms"]="wiki" )
+  _minf "Enable graphviz"
+  sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+  _mok "tracadmin ${newSections[1]} is enabled in components"
+  newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+  _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+  # Set a a new section in trac.ini
+  _minf "Configure graphviz"
+  for graphvizOption in ${!graphviz[*]}
+  do
+  _minf "Add possible missing section $graphvizOption = ${graphviz["$graphvizOption"]} in trac.ini"      # Keep previous index logic
+   _setOptionInTracIniSection "${newSections[1]}" "$graphvizOption" "${graphviz[$graphvizOption]}"
+  done
+}
+_configureTags()
+{
+  declare -a newSections=( "components" "tags") # New section
+  declare -a pluginEnablingOptionValues=('tractags.*' "enabled") # array
+  declare -A tags=(["ignore_closed_tickets"]="true" ["ticket_fields"]='component, keywords, milestone' ["revisable_realms"]="wiki" )
+
+  _minf "Enable tags"
+  sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+  _mok "tracadmin ${newSections[1]} is enabled in components"
+  newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+  _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+
+  # Set a a new section in trac.ini
+  _minf "Configure tags"
+  for tagOption in ${!tags[*]}
+  do
+  _minf "[${newSections[1]}] add  $tagOption = ${tags["$tagOption"]} in trac.ini"      # Keep previous index logic
+   _setOptionInTracIniSection "${newSections[1]}" "$tagOption" "${tags[$tagOption]}"
+  done
+}
+#
+_configureBreadCrumsNav()
+{
+  declare -a newSections=( "components" "breadcrumbs") # New section
+  declare -a pluginEnablingOptionValues=('breadcrumbsnav.*' "enabled") # array
+  declare -A breadcrumbsnav=(["ignore_pattern"]=" " ["max_crumbs"]="6" ["paths"]="/wiki/,/ticket/,/milestone/")
+
+  _minf "Enable breadcrumbsnav"
+  sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && _mok "tracadmin ${newSections[1]} is enabled in components"
+  newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")  && \
+  _minf "tracadmin ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+  # Set a a new section in trac.ini
+  _minf "Configure breadcrumbsnav"
+  for breadCrumbsOption in ${!breadcrumbsnav[@]}
+  do
+    _minf "[${newSections[1]}] add  $breadCrumbsOption = ${breadcrumbsnav["$breadCrumbsOption"]}"      # Keep previous index logic
+    _setOptionInTracIniSection "${newSections[1]}" "$breadCrumbsOption" "${breadcrumbsnav[$breadCrumbsOption]}"
+  done
+}
+#
+_configureWikiToPdf()
+{
+ tmp_dir=/tmp/wikitopdf
+ [ ! -d "$tmp_dir" ] && mkdir $tmp_dir
+ declare -a pluginEnablingOptionValues=( "wikitopdf.*" "enabled")
+ declare -a newSections=( "components" "wikitopdf" "wikitopdf-admin" "wikitopdf-page")
+ declare -A wikitopdf=(["base_dir"]="${HTML_TRAC_DIR}/${PROJECT}" ["titlefile"]="${HOME}/tools/misc"  ["link"]="${PROJECT_URL}" ["folder_name"]="${PROJECT}" \
+                      ["tmp_dir"]="$tmp_dir" ["trac_uri"]="http://$(uname -n)/${PROJECT}/" ["css_file"]="/var/lib/trac/IS/conf/htmldoc.css" \
+                       )
+ declare -A wikitopdf_admin=(["size"]="A4" ["right"]="1.5cm" ["left"]="1.5cm" ["top"]="1.5cm" \
+                             ["bottom"]="1.5cm" ["no-links"]="None" ["toctitle"]="Summary" ["numbered"]="None" ["linkstyle"]="plain" \
+                             ["header"]="l" ["footer"]=".r1" ["logoimage"]="$LOGO_FILE")
+ declare -A wikitopdf_page=(["size"]="A4" ["right"]="1.5cm" ["left"]="1.5cm" ["top"]="1.5cm"\
+                            ["bottom"]="1.5cm" ["no-links"]="None" ["linkstyle"]="plain"  \
+                            ["header"]="l" ["footer"]=".r1" ["logoimage"]="$LOGO_FILE")
+
+ _minf "Enable wikitopdf"
+ sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+ _mok "tracadmin ${newSections[1]} is enabled in components"
+
+ for wikiToPdfOption in ${!wikitopdf[@]}
+ do
+    _minf "[${newSections[1]}] add  $wikiToPdfOption = ${wikitopdf[$wikiToPdfOption]} in trac.ini"      # Keep previous index logic
+    _setOptionInTracIniSection "${newSections[1]}" "$wikiToPdfOption" "${wikitopdf[$wikiToPdfOption]}"
+ done
+
+ for wikiToPdfAdminOption in ${!wikitopdf_admin[@]}
+ do
+    _minf "[${newSections[2]}] add  $wikiToPdfAdminOption = ${wikitopdf_admin["$wikiToPdfAdminOption"]} in trac.ini"
+    _setOptionInTracIniSection "${newSections[2]}" "$wikiToPdfAdminOption" "${wikitopdf_admin[$wikiToPdfAdminOption]}"
+ done
+
+for wikiToPdfPageOption in ${!wikitopdf_page[@]}
+do
+   _minf "[${newSections[3]}] add  $wikiToPdfPageOption = ${wikitopdf_page["$wikiToPdfPageOption"]} in trac.ini"
+   _setOptionInTracIniSection "${newSections[3]}" "$wikiToPdfPageOption" "${wikitopdf_page[$wikiToPdfPageOption]}"
+done
+}
+
+#
+_configureCustomFieldAdmin()
+{
+ declare -a newSections=( "components" "ticket-custom") # New section
+ declare -a pluginEnablingOptionValues=('customfieldadmin.*' "enabled") # array
+ declare -A customfieldadmin=(["machine.options"]="vmgit|vmtrac|dum1|dum2|fritzbox|app|big"\
+                                         ["machine"]="select" ["machine.label"]="Hostname" ["machine.value"]="vmgit")
+
+ _minf "Enable customfieldadmin"
+ sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+ _mok "tracadmin ${newSections[1]} is enabled in components"
+ newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+ _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+
+  # Set a a new section in trac.ini
+  _minf "Configure customfieldadmin"
+ for customOption in ${!customfieldadmin[*]}
+ do
+    _minf "[${newSections[1]}] add  $customOption = ${customfieldadmin["$customOption"]} in trac.ini"      # Keep previous index logic
+    _setOptionInTracIniSection "${newSections[1]}" "$customOption" "${customfieldadmin[$customOption]}"
+ done
+}
+#----------------------------------------------------------------------------------------------
+##----------------------------------------------------------------------------------------------
+_configureWikiExtras()
+{
+declare -a pluginEnablingOptionValues=( "tracwikiextras.*" "enabled")
+declare -a newSections=( "components" "wikiextras" "wikiextras-smileys" "wikiextras-symbols" "wikiextras-custom-phrases")
+
+declare -A wikiextras=(["mrbox_width"]="300" ["shadowless_boxes"]="false" ["wide_toc"]="false" \
+                       ["icon_limit"]="32" ["showicons_limit"]="96" ["shadowless_icons"]="false"\
+                       ["fixme_phrases"]="BUG, FIXME" ["todo_phrases"]="REVIEW, TODO" ["done_phrases"]="DONE, DEBUGGED, FIXED, REVIEWED")
+
+ declare -A  wikiextras_smileys=(["_remove_defaults"]="true"          ["smiley"]=':-) :)'       ["smiley-wink"]=';-) ;)' ['exclamation--frame']='/!\ ' \
+                                 ['exclamation-diamond-frame']='<!>'  ['thumb']='{DN} {!OK}'    ['thumb-up']='{DN} {OK}' \
+                                 ['thumb-up']='{UP} {OK}'             ['star']='{*}'            ['star-empty']='{o}'     ['light-bulb']='(!)'  \
+                                 ['priority1']='{p1} {P1}'            ['priority2']='{p2} {P2}' ['priority3']='{p3} {P3}' )
+
+
+declare -A  wikiextras_symbols=(['_remove_defaults']='true' ['&laquo;']='>>'  ['&hearts;']='<3')
+declare -A  wikiextras_custom_phrases=(['nice']='NICE, COOL' ['attention']="ATTENTION" ['new']='NEW')
+# enable wikiextras in components
+_minf "Enable wikiextras"
+sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+_mok "tracadmin ${newSections[1]} is enabled in components"
+
+newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+_mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+
+# Set [wikiextras] in trac.ini
+_minf "Configure wikiextras"
+for wikiExtra in ${!wikiextras[@]}
+do
+  _minf "[${newSections[1]}] add  $wikiExtra = ${wikiextras["$wikiExtra"]} in trac.ini"      # Keep previous index logic
+  _setOptionInTracIniSection "${newSections[1]}" "$wikiExtra" "${wikiextras[$wikiExtra]}"
+done
+# Set [wikiextras_smileys] in trac.ini
+_minf "Configure wikiextras_smileys"
+for wikiExtraSmiley in ${!wikiextras_smileys[@]}
+do
+  _minf "[${newSections[2]}] add  $wikiExtraSmiley = ${wikiextras_smileys["$wikiExtraSmiley"]} in trac.ini"      # Keep previous index logic
+  _setOptionInTracIniSection "${newSections[2]}" "$wikiExtraSmiley" "${wikiextras_smileys[$wikiExtraSmiley]}"
+done
+# Set [wikiextras_symbols]
+_minf "Configure wikiextras_symbols"
+for wikiExtraSymbol in ${!wikiextras_symbols[@]}
+do
+  _minf "[${newSections[3]}] add  $wikiExtraSymbol = ${wikiextras_symbols["$wikiExtraSymbol"]} in trac.ini"      # Keep previous index logic
+  _setOptionInTracIniSection "${newSections[3]}" "$wikiExtraSymbol" "${wikiextras_symbols[$wikiExtraSymbol]}"
+done
+# Set [wikiextras_symbols]
+_minf "Configure _custom_phrases"
+for wikiExtraCustomPhrase in ${!wikiextras_custom_phrases[@]}
+do
+  _minf "[${newSections[4]}] add  $wikiExtraCustomPhrase = ${wikiextras_custom_phrases["$wikiExtraCustomPhrase"]} in trac.ini"      # Keep previous index logic
+  _setOptionInTracIniSection "${newSections[4]}" "$wikiExtraCustomPhrase" "${wikiextras_custom_phrases[$wikiExtraCustomPhrase]}"
+done
+}

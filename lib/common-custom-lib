@@ -1,0 +1,78 @@
+#!/bin/bash
+# Common custom methode to tune trac
+# Author: jdum
+# Date: 1 mai 2019
+# Version 1.0
+#-----------------------------------------------------------------------------------------------
+# Customize the trac project
+#/usr/lib/python2.7/site-packages/trac/htdocs/
+FUCKING_LOGO_DIR=/usr/lib/python2.7/site-packages/trac/htdocs
+declare -a CUSTOM_METHODS=( "_setTracLogging" "_setTracIniLogoProject" "_setTicketMilestones" "_setTicketVersions" "_setTicketComponents" "_setDefaultTicketValues" )
+
+_setTracLogging()
+{
+  _mdbg "Enter _setTracLogging"
+  sudo touch $PROJECT_DIR/log/${PROJECT}.log
+  [ -f $PROJECT_DIR/log/${PROJECT}.log ] && _minf "$(ls -l $PROJECT_DIR/log)"
+  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_file" "${PROJECT}.log" || _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_type" "file" || _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_level" "DEBUG" || _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_format" '($(thread)d) Trac[$(basename)s:$(module)s] $(levelname)s: $(message)s' || _mnok "tracadmin failed with errno=$?"
+  _mdbg "Leave _setTracLogging"
+}
+_setTracIniLogoProject()
+{
+  _mdbg "Enter _setTracIniLogoProject in action"
+  uProject=$(_upperCase "${PROJECT}")
+  srcPath="site/$(basename ${LOGO_FILE})"           #relative logo website path::
+  declare -A header_logo=(["src"]="${srcPath}" ["alt"]="${uProject}" ["width"]="150" ["height"]="100" ["link"]="${PROJECT_URL}")
+
+  [ -f ${LOGO_FILE} ] && _mdbg "Found a logo to install"
+  sudo cp ${LOGO_FILE} ${PROJECT_DIR}/htdocs                   && _mdbg "Logo transfered under ${PROJECT_DIR}/htdocs"
+
+  for logoSetting in ${!header_logo[@]}
+  do
+   _mdbg "Will modify ${logoSetting}=${header_logo[${logoSetting}]}"
+    sudo trac-admin ${PROJECT_DIR} config set "header_logo" "${logoSetting}" "${header_logo[${logoSetting}]}" || _mnok "tracadmin failed with errno=$?"
+    newValue=$(sudo trac-admin ${PROJECT_DIR} config get "header_logo" "${logoSetting}")                      && _mdbg "[header_logo] has now ${logoSetting} = ${header_logo[${logoSetting}]}"
+  done
+  sudo chown apache apache ${PROJECT_DIR}/htdocs/${PROJECT}.png
+ _mdbg "Leave _setTracIniLogoProject in action"
+}
+
+
+_setTicketMilestones()
+{
+   title=$(_upperCase "${PROJECT}")
+   for i in 1 2 3 4
+   do
+     sudo trac-admin $PROJECT_DIR milestone rename "milestone${i}" "${title}${i}" && _mdbg "milestone${i} changed to ${title}${i}"
+   done
+}
+_setTicketVersions()
+{
+
+  sudo trac-admin $PROJECT_DIR version add "3.0"
+
+}
+_setTicketComponents()
+{
+
+    for component in component1 component2
+    do
+              sudo trac-admin $PROJECT_DIR component remove $component
+    done
+
+    for component in "Hardware installation" "Hardware configuration" "Software installation" "Software configuration" \
+                      "Script development" "Application development" "Network management"
+    do
+              sudo trac-admin $PROJECT_DIR component add  "$component"
+    done
+}
+_setDefaultTicketValues()
+{
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_type"      "task"                       && _mdbg "$PROJECT with default_type task"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_version"   "1.0"                        && _mdbg "$PROJECT with default_version 1.0"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_component" "Software installation"      && _mdbg "$PROJECT with default_component Software installation"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_milestone" "$(_upperCase $PROJECT)1"   && _mdbg "$PROJECT with default_milestone is ${PROJECT}1"
+}
