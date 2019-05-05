@@ -8,6 +8,15 @@
 #/usr/lib/python2.7/site-packages/trac/htdocs/
 FUCKING_LOGO_DIR=/usr/lib/python2.7/site-packages/trac/htdocs
 declare -a CUSTOM_METHODS=( "_setTracLogging" "_setTracIniLogoProject" "_setTicketMilestones" "_setTicketVersions" "_setTicketComponents" "_setDefaultTicketValues" )
+declare -a POST_PLUGIN_CUSTOM_METHODS=( "_customizeTicketImport")
+
+_customizeTicketImport()
+{
+  for user in ${!USERS[*]}
+  do
+  sudo trac-admin ${PROJECT_DIR}  permission add ${user} IMPORT_EXECUTE && _minf " user got IMPORT_EXECUTE permission"
+  done
+}
 
 _setTracLogging()
 {

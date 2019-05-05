@@ -51,8 +51,9 @@ TRACLOG_FILE=${PROJECT_DIR}/log/${PROJECT}.log
 declare -A USERS=( [admin]="admin" [jdum]="123password" [ronan]="guerin" )
 
 GEN_FLAG=1                 # proceed to the trac generation project
-CUSTOMIZATION_FLAG=1      # customization of the trac project
+CUSTOMIZATION_FLAG=1       # customization of the trac project
 PLUGINS_FLAG=1             # configure plugins or not
+POST_PLUGIN_CUSTOM_FLAG=1       # make customization for some plugins
 
 #.------------------------------------------------------------------
 #--MAIN-------------------------------------------------------------
@@ -93,7 +94,7 @@ then
   do
     _minf "method ${customMethod} available"
   done
-  sleep 5
+
   sudo systemctl stop httpd.service && _mok "httpd Web server stopped" && _mok "Apache stopped"
   _mdbg "Trac project $PROJECT customization"
   _backupTracIni
@@ -119,13 +120,20 @@ then
   done
   sudo systemctl start httpd  && _mok "httpd Web server started" && _mok "Apache restarted"
 fi
-
-
-
+# Begin post plugin customization ----------------------------------------------------------------
+#
+if [ "${POST_PLUGIN_CUSTOM_FLAG}" == "1" ]
+then
+    _minf "Starting ${PROJECT} plugins customization -----------------------------"
+    for customPluginMethod in ${POST_PLUGIN_CUSTOM_METHODS[@]}
+    do
+          ${customPluginMethod} && _mok "Custom method is ${customPluginMethod}"
+    done
+fi
 #sudo systemctl stop httpd
 
-#_setTicketMilestones
-#sudo systemctl stop httpd
+#_hack
+sudo trac-admin "${PROJECT_DIR}" upgrade
 sudo chown apache:apache $TRACLOG_FILE
 _mok "$(_upperCase $PROJECT) generation complete, you can access it at : $PROJECT_URL"
 

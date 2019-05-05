@@ -5,11 +5,13 @@
 #
 #--------------------------------------------------------------------------------------------------------
 #
-declare -a SUPPORTED_PLUGINS=( "customfieldadmin" "wikiextras" "wikitopdf" "breadcrumbsnav" "tags" "stractistics") # graphviz has benn disabled
+declare -a SUPPORTED_PLUGINS=( "customfieldadmin" "wikiextras" "wikitopdf" "breadcrumbsnav" "tags" \
+                               "ticketimport" "stractistics") # graphviz has benn disabled
 
 declare -A METHODS_PLUGINS=(["customfieldadmin"]="_configureCustomFieldAdmin" ["wikiextras"]="_configureWikiExtras" \
                             ["wikitopdf"]="_configureWikiToPdf" ["breadcrumbsnav"]="_configureBreadCrumsNav" \
-                            ["tags"]="_configureTags" ["graphviz"]="_configureGraphviz" ["stractistics"]="_configureStractistics" )
+                            ["tags"]="_configureTags" ["graphviz"]="_configureGraphviz" ["stractistics"]="_configureStractistics" \
+                            ["ticketimport"]="_configureTicketImport" )
 
 declare -A PLUGINS_URL=(["customfieldadmin"]="https://trac-hacks.org/svn/customfieldadminplugin/0.11" \
                         ["wikiextras"]="https://trac-hacks.org/svn/wikiextrasplugin/trunk" \
@@ -18,8 +20,37 @@ declare -A PLUGINS_URL=(["customfieldadmin"]="https://trac-hacks.org/svn/customf
                         ["tags"]="https://trac-hacks.org/svn/tagsplugin" \
                         ["graphviz"]="https://trac-hacks.org/svn/graphvizplugin/trunk" \
                         ["stractistics"]="https://trac-hacks.org/svn/stractisticsplugin" \
-                        )
-                        #
+                        ["ticketimport"]="https://trac-hacks.org/svn/ticketimportplugin/1.0" )
+
+_configureTicketImport()
+{
+  declare -a newSections=( "components" "mainnav" "trac" "importer") # New section
+  declare -a pluginEnablingOptionValues=('talm_importer.importer.*' "enabled") # array
+  declare -A mainav=(["importer.label"]="Import Tickets")
+  declare -A trac=(["mainnav"]="wiki,browser,roadmap,...,importer,...,admin,search")
+  declare -A importer=(["datetime_format"]="....")
+  _minf "Enable ticketimport"
+  sudo trac-admin ${PROJECT_DIR} config set "components" "${pluginEnablingOptionValues[0]}" "${pluginEnablingOptionValues[1]}" && \
+  _mok "tracadmin ${newSections[1]} is enabled in components"
+  newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
+  _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+  _minf "Configure stractistics"
+  for option in ${!mainnav[*]}
+  do
+      _minf "[${newSections[1]}] add $option = ${mainnav["$option"]} in trac.ini"      # Keep previous index logic
+      _setOptionInTracIniSection "${newSections[1]}" "$option" "${mainnav[$option]}"
+  done
+  for option in ${!trac[*]}
+  do
+      _minf "[${newSections[2]}] add $option = ${trac["$option"]} in trac.ini"      # Keep previous index logic
+      _setOptionInTracIniSection "${newSections[1]}" "$option" "${trac[$option]}"
+  done
+  for option in ${!importer[*]}
+  do
+      _minf "[${newSections[3]}] add $option = ${importer["$option"]} in trac.ini"      # Keep previous index logic
+      _setOptionInTracIniSection "${newSections[1]}" "$option" "${importer[$option]}"
+  done
+}
 _configureStractistics()
 {
     declare -a newSections=( "components" "stractistics") # New section
@@ -33,7 +64,7 @@ _configureStractistics()
     _mok "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
 
     # Set a a new section in trac.ini
-    _minf "Configure customfieldadmin"
+    _minf "Configure stractistics"
     for option in ${!stractistics[*]}
     do
         _minf "[${newSections[1]}] add $option = ${stractistics["$option"]} in trac.ini"      # Keep previous index logic
