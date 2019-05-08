@@ -4,55 +4,45 @@
 # Date: 30 avril 2019
 # Version 1.1
 # Add _mdbg
-
+declare -A COLORS=( ["black"]="30" ["red"]="31" ["green"]="32" ["brown_orange"]="33"\
+                    ["blue"]="34" ["purple"]="35"  ["cyan"]="36" ["light_gray"]="37")
 # returns date formated string -----------------------------------------
 _getDateLine()
 {
 	echo -ne "[$(date +"%m-%d-%Y")][$(date +"%T")]"
 }
-# Display msg with color tags OK, NOK ,INFO ----------------------------
-_displayColorTag()
+# returns a colored string
+_colorString()
 {
-	  logfile=/tmp/$(basename ${0}).log
-    tag="${1}"
-    text="${2}"
-    # color codes list
-		declare -A COLORS=( ["black"]="30" ["red"]="31" ["green"]="32" ["brown_orange"]="33" ["blue"]="34" ["purple"]="35"  ["cyan"]="36" ["light_gray"]="37")
-#Dark Gray     1;30
-#Light Red     1;31
-#Light Green   1;32
-#Yellow        1;33
-#Light Blue    1;34
-#Light Purple  1;35
-#Light Cyan    1;36
-#White         1;37
+	color="$1"
+	string="$2"
+	escColorValue=${COLORS["$color"]}
 	# escape sequence
-	 esc_start="\033["
-	esc_end="\033[0m"
+	escStart="\033["
+	escEnd="\033[0m"
 	# char formating
 	bold=';1'
 	underlined=4
 	flashing=1
 
-     case ${tag} in
-     NOK)  color=${COLORS["red"]}
-           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
-     ;;
-     OK)   color=${COLORS["green"]}
-           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
-     ;;
-     INFO) color=${COLORS["brown_orange"]}
-           echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
-     ;;
-		 DEBUG) color=${COLORS["blue"]}
-		 				echo -ne "$(_getDateLine)[${esc_start}${color};${color}${bold}m${tag}${esc_end}]  ${text}" | tee --append $logfile
-     ;;
+	echo -ne "${escStart}${escColorValue};${escColorValue}${bold}m${string}${escEnd}"
+}
+# Display msg with color tags OK, NOK ,INFO ----------------------------
+_displayColorTag()
+{
+	   logfile="/tmp/$(basename ${0}).log"
+     tag="${1}"
+     text="${2}"
 
-     *)  tag="Unsupported colored case tag"
-		 echo -ne "$(_getDateLine)[${esc_start}${red};${red}${bold}m${tag}${esc_end}]" | tee --append $logfile
-     ;;
-     esac
-     echo | tee --append $logfile
+     case ${tag} in
+
+         NOK)   echo -ne "$(_getDateLine)[$(_colorString 'red' $tag)]  ${text}" | tee --append $logfile
+         ;;
+         OK)    echo -ne "$(_getDateLine)[$(_colorString 'green' $tag)]  ${text}" | tee --append $logfile
+         ;;
+         INFO)  [ $VERBOSE -eq 1 -o $DEBUG -eq 21 ] && echo -ne "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]  ${text}" | tee --append $logfile
+
+	   esac
 }
 # Return a time stamp  -----------------------------------------
 _getTimeStamp()
@@ -61,46 +51,80 @@ _getTimeStamp()
  echo -ne $(date +"%Y%m%d%H%M%S")
 
 }
+
 #- wrapper methods  -----------------------------------------
 
 _mok()
 {
 	_displayColorTag OK  "${1}"
+	echo
 }
 _mnok()
 {
 	_displayColorTag NOK  "${1}"
+	echo
 }
 _minf()
 {
 	_displayColorTag INFO  "${1}"
+	echo
 }
 _mdbg()
 {
-	[ "$DEBUG" == "1" ] && _displayColorTag DEBUG  "${1}"
+	debugLevel=$1
+	message="$2"
+  thisTag='DEBUG'
+  declare VALID_LEVELS=( 1 2 3 4 5 6 21 )
+  [ ${DEBUG} -ne ${debugLevel} ] && return
+	if [[ "${message}" == --* ]]
+  then
+	   		color="cyan"
+		 		coloredMessage=$(_colorString $color "${message}")
+        coloredTag=$(_colorString $color "${thisTag}")
+		 		echo -ne "$(_getDateLine)["$coloredTag"]  ${coloredMessage}" | tee --append $logfile 
+   else
+			 		for dbg in ${VALID_LEVELS[*]}
+					do
+								 if [ ${DEBUG} -eq 1 -o $DEBUG -eq 21 ]
+								 then
+                   color="blue"; coloredTag=$(_colorString $color "$thisTag")
+                   echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
+                 fi
+                 if [ ${DEBUG} -eq 1 -o $DEBUG -eq 21 ]
+								 then
+                      case $DEBUG in
+                        1) color="blue";coloredTag=$(_colorString $color "$thisTag")
+                                   echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
+										    ;;
+						    2|3|4|5|6) color="purple";coloredTag=$(_colorString $color "$thisTag")
+                           echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
+										    ;;
+										 	 21)  color="brown_orange"; coloredTag=$(_colorString $color "$thisTag")
+                            echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
+											  ;;
+										  esac
+											return 0
+								 fi
+					done
+					echo $(_colorString red "Invalid debug $debugLevel, supported one's are 1 2 3 4 5 6 21" )
+					exit 3
+  fi
 }
+#---------------------------------------------------------------------
 
 # Set logging ------------------------------------------
 _setLogging()
 {
+	_mdbg 2 "-- Enter _setLogging"
   logfile=/tmp/$(basename ${0}).log
   timestamp=$(_getTimeStamp)
   [ -f ${logfile} ] && mv ${logfile} "${logfile}.$(_getTimeStamp)" && _minf "logfile ${logfile} is backuped in ${logfile}.$timestamp"
   echo "# $(_getDateLine) $(basename $0) logging started"> ${logfile}
+	_mdbg 2 "-- Leave _setLogging"
+  return 0
 }
 #---------------------------------------------------
-#---------------------------------------------------
-#- testing  -----------------------------------------
-if [ "$1" = "-t" ]
-then
-	_mok lallala
-	_mnok lllllll
-	_minf iiiii
-	_getDateLine
-	 echo
-	 _setLogging
-	 echo
-fi
+
 _upperCase()
 {
 echo ${1}|dd conv=ucase 2>/dev/null

@@ -1,0 +1,17 @@
+:link, :visited, dt em, .milestone .info h2 em,
+#metanav form.trac-logout button,
+#content.report h3 a em,
+#content.build h2.config :link, #content.build h2.config :visited,
+.plugin h3 a {
+ color: #00b;font-weight: bolder;
+}
+/* To change red of the source path in browser, we need an extra rule to reset the grey (#998) of the first element */
+#content.browser h1 :link, #content.browser h1 :visited {
+ color: #00b;font-weight: bolder;
+}
+#content.browser h1 .first:link, #content.browser h1 .first:visited {
+ color: #998;
+}
+.trac-button.trac-delete {
+    color: #00b;
+}

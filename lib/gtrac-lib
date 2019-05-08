@@ -1,0 +1,80 @@
+#!/bin/bash
+# gtrac-lib shell script library
+# Author: jdum
+# Date: 30 avril 2019
+# Version 1.1
+#
+#!/bin/bash
+
+# Check gtrac command line parameters
+_checkParam()
+{
+  if [ $# -eq 1 ]
+  then
+      case $1 in
+      -V|--version) echo "$0 version $VERSION"
+      exit 0
+      ;;
+      -h|--help) _helpMe
+      ;;
+      *) _errorParam
+      ;;
+      esac
+  fi
+  if [ $# -eq 3 ]
+  then
+      case $1 in
+      -v|--verbose) VERBOSE=1;shift;_checkParam $*
+      ;;
+      *) _errorParam
+      ;;
+      esac
+  fi
+  if [[ $(( $# % 2 )) == 0 ]]
+  then
+
+    if [ $# -eq 2 ]
+    then
+          case $1 in
+          -p|--project)
+                     case $2 in
+                          [a-zA-Z1-9]*) PROJECT=$2
+
+                          return 0
+                          ;;
+                          *) _errorParam
+                          ;;
+                     esac
+          ;;
+          *) _errorParam
+          ;;
+          esac
+    fi
+    if [ $# -ge 4 ]
+    then
+          case $1 in
+          -d|--debug)
+                if [ $2 -eq 1 ]
+                then
+                    DEBUG=$2;shift;shift;_checkParam $*
+                fi
+          ;;
+          *) _errorParam
+          ;;
+          esac
+    fi
+  else
+        _errorParam
+  fi
+}
+_errorParam()
+{
+  echo "Invalid parameter, see $0 -h"
+  exit 1
+}
+_helpMe()
+{
+  echo "e.g  $0 -p <PROJECT NAME> or $0 --project <PROJECT NAME>"
+             echo "with debug -d 1 -p <PROJECT NAME>"
+  exit 0
+}
