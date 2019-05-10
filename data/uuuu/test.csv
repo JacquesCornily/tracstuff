@@ -1,0 +1,2 @@
+ticket,summary, reporter, owner, description, type, status, priority, milestone, component, version, resolution, keywords, cc, time, changetime, machine
+,t1,jdum,jdum,sshdmmmm,task,open,major,UUUU1,Software configuration,1.0,,,,,,big

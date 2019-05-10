@@ -81,7 +81,7 @@ _mdbg()
 	   		color="cyan"
 		 		coloredMessage=$(_colorString $color "${message}")
         coloredTag=$(_colorString $color "${thisTag}")
-		 		echo -ne "$(_getDateLine)["$coloredTag"]  ${coloredMessage}" | tee --append $logfile 
+		 		echo -ne "$(_getDateLine)["$coloredTag"]  ${coloredMessage}" | tee --append $logfile;echo 
    else
 			 		for dbg in ${VALID_LEVELS[*]}
 					do

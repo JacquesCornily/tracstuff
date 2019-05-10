@@ -1,0 +1,95 @@
+[[testing]]
+[[BR]]
+ = [http://vmtrac/tract/test INTRANET project] =
+{{{#!box
+= * INTRANET
+[[BR]]
+Le projet Intranet est divisé en plusieurs jalons.
+L intranet est ainsi progressivement amélioré afin
+de proposer un environnement de dévelopement performant.
+
+[[BR]]
+
+||'''Jalon'''||'''Description'''||'''Matériel utilisé '''||
+||      '''[[Color(OPEN, white/blue/120%)]]''      ||Mise en place d'une infrastructure limitée [[BR]] permettant un petit de développement collaboratif||2 pc portable, 2 serveurs et un routeur [[BR]] ||
+|| '''INTRANET 2''' || Mise en place d'une infrastructure [[BR]] de développement , utilisant largement des containers, [[BR]] et un rasperry ||2 pc portable, 2 serveurs et un routeur , et un rasperry||
+||'''INTRANET 3'''|| Mise en place d'une infrastructure mixte, [[BR]]et rajoutant des serveurs supplémentaires [[BR]] de test et production ||4 serveur hébergés ainsi que les machine pécédément utiliséés||
+
+[[BR]]
+}}}
+{{{#!box
+= Vue d'ensemble du jalon intranet 1 du projet.
+ICI
+}}}
+{{{#!box
+= Trac setup
+ Le gestionnaire de projet Trac comprend un paquet de base, et de plugin
+ permettant d'ajouter certaines fonctionnalités.
+
+ L'installation de Trac proprement dit est décrite [https://www.hiroom2.com/2017/01/22/centos-7-install-trac/ ici]
+ Voir le script la  install Trac sous Centos 7
+
+ La liste des plugins installés pour ce projet est consultable [http://vmtrac/trac/test/wiki/plugins ici]
+
+
+[[BR]]
+
+= Basic machine's setup
+[[BR]]
+||          ||[[==dum1==]] ==||'''dum2'''||'''app''' ||'''big'''||
+||'''Description'''|| portable de secour ||| portable de development || serveur applicatif || serveur de sauvegarde ||
+|| '''OS''' ||Centos 7 || ubuntu  17.04 ||Centos 7 ||Centos 7 ||
+|| '''CPU'''        || Intel(R) Core(TM) i7-2820QM CPU @ 2.30GHz || Intel(R) Core(TM) i7-2820QM CPU @ 2.30GHz || Intel(R) Core(TM) i7 CPU @ 3GHz ||Intel(R) Core(TM) i5 CPU @ 3,5GHz ||
+|| '''Memory''' ||  16 Giga || 12 Giga || 16 Giga || 8 Giga ||
+|| '''Hard drives'''  ||3 SSD 120 Giga||1 SSD 60 Giga||2 SSD 120 giga||1 SSD, 60 Giga, 5 x 2 Tera, Western digital||
+
+= Specific software installation
+[[BR]]
+||          ||'''dum1'''||'''dum2'''||'''app''' ||'''big'''||
+|| '''ssh server''' ||''[[Color( OPEN , white/blue/120%)]]''||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||
+|| '''ssh client''' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||
+|| '''openvpn client''' ||''[[Color(OPEN, white/blue/120%)]]''||''[[Color(   NA   , white/red/120%)]]''||''[[Color(NA, white/red/120%)]]''||''[[Color(OPEN, white/blue/120%)]]'' ||
+|| '''openvpn server''||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||'[[Color(NA, white/red/120%)]]'' ||
+|| '''Idea (IDE) + Java''' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||
+|| '''VMware''' ||DONE ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||
+[[BR]]
+
+Some text
+= VM setup
+[[BR]]
+
+||          ||'''Trac'''||'''Git'''||'''Backup''' ||'''Ldap'''||
+||'''VMs setup'''      ||DONE  ||''[[Color(OPEN, white/blue/120%)]]''  ||''[[Color(NA, white/red/120%)]]''    ||''[[Color(NA, white/red/120%)]]'''   ||
+|| '''VM host locations'''      ||dum1 ||dum1 ||big ||dum1 ||
+||'''VM hostname''' ||vmtrac ||vmgit||''[[Color(NA, white/red/120%)]]'' ||vmldap ||
+[[BR]]
+= LXD container's setup
+[[BR]]
+
+''Le projet Intranet est divisé en plusieurs jalons.
+L intranet est ainsi progressivement amélioré afin
+de proposer un environnement de dévelopement performant.
+La partie INTRANET 3, quand lui disposer d'un environnement
+cd pré production  et de production.
+''
+[[BR]]
+=Color(INTRANET 1, white/#3383ff/120%)
+[[BR]]
+Mise en place d'une infrastructure [[BR]] de développement , utilisant largement les containers LXD, [[BR]] et un raspberry ''||''2 pc portables, 2 serveurs,un routeur,et un raspberry 
+||'''[[Color(Jalons, white/black/140%)]]'''||'''[[Color(Description    , white/black/140%)]]'''||'''[[Color(Hardware configuration    , white/black/140%)]]'''||
+||      '''[[Color(INTRANET 1, white/#3383ff/120%)]]'''      ||''''||''2 pc portable, 2 serveurs et un routeur [[BR]] ''||
+|| '''[[Color(INTRANET 2, white/#3383ff/120%)]]''' ||''Mise en place d'une infrastructure [[BR]] de développement , utilisant largement les containers LXD, [[BR]] et un raspberry ''||''2 pc portables, 2 serveurs,un routeur,et un raspberry ''||
+||'''[[Color(INTRANET 3, white/#3383ff/120%)]]'''||'' Mise en place d'une infrastructure mixte, [[BR]]et rajoutant des serveurs supplémentaires [[BR]] de test et production ''||''4 serveur hébergés ainsi que les machines précédemment utilisées ''||
+
+[[BR]]
+
+
+
+}}}
+
+
+
+
+
+
+

@@ -59,26 +59,31 @@ _installPluginPackage()
   _mdbg 2  "Enter _installPluginPackage"
   _mdbg 2  "$pluginName install with $installType"
   cd ${PROJECT_DIR}/plugins
-  case  ${installType} in
-    easyinstall)  _mdbg 2  "From $(pwd) will perform an $installType"
-                   sudo easy_install -U -Z  ${PLUGINS_URL["${pluginName}"]}  2>&1 | tee --append $LOG_FILE >/dev/null && \
-                  _mok "$pluginName has been installed with $installType "
-    ;;
-    svn) _mdbg 1  "From $(pwd) will perform an $installType"
-         sudo mkdir $installType &&  _minf "Create plugin $installType plugin repo"
-         _mdbg 1  "From $(pwd) will perform an $installType co"
-         svn co ${PLUGINS_URL["${pluginName}"]} && _mok "$pluginName svn repo co"
-         setupPath=$(find . -name setup.py)
-         _mdbg 1  "Warning setupPath=$setupPath"
-         cd $(dirname $setupPath)
-         _mdbg 1  "Lauchning setup.py from $(pwd)"
-         _mdbg 1  "From $(pwd) will perform : python setup.py install"
-         sudo python setup.py install && _mok "${pluginName} installed the $installType way"
+  if [ "${PLUGINS_URL["${pluginName}"]}" == "core" ]
+  then
+        _minf "$pluginName is a core Trac plugin"
+  else
+        case  ${installType} in
+          easyinstall)  _mdbg 2  "From $(pwd) will perform an $installType"
+                         sudo easy_install -U -Z  ${PLUGINS_URL["${pluginName}"]}  2>&1 | tee --append $LOG_FILE >/dev/null && \
+                        _mok "$pluginName has been installed with $installType "
+          ;;
+          svn) _mdbg 1  "From $(pwd) will perform an $installType"
+               sudo mkdir $installType &&  _minf "Create plugin $installType plugin repo"
+               _mdbg 1  "From $(pwd) will perform an $installType co"
+               svn co ${PLUGINS_URL["${pluginName}"]} && _mok "$pluginName svn repo co"
+               setupPath=$(find . -name setup.py)
+               _mdbg 1  "Warning setupPath=$setupPath"
+               cd $(dirname $setupPath)
+               _mdbg 1  "Lauchning setup.py from $(pwd)"
+               _mdbg 1  "From $(pwd) will perform : python setup.py install"
+               sudo python setup.py install && _mok "${pluginName} installed the $installType way"
 
-    ;;
-    pip) _mdbg 1  "pip install"
-    ;;
-  esac
+          ;;
+          pip) _mdbg 1  "pip install"
+          ;;
+        esac
+   fi
   _mdbg 1  "-- Leave _installPluginPackage"
 return 0
 }

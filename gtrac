@@ -2,7 +2,7 @@
 # Change URL path
 # Author jdum
 # Generation of a trac project
-# version 0.7.1
+# version 0.8
 #
 # Changed URL path
 # Clean up of previous trac project
@@ -25,17 +25,23 @@
 # 0.7 change trac style
 # 0.7 add parsing command line paramters
 # 0.7 command line debug with fine tuning
-# 0.8 more plugins
-# 0.8 bash error handling
+# 0.7 bash error handling
+# 0.7 level of debug and clearer messages
+# 0.7 add ico
+
+# 0.8 more plugins git, exceldownload
 # 0.8 import more wiki and tickets
-# 0.8 level of debug and clearer messages
+# 0.8 level of debug with debug group
 # 0.8 install speed up
-# 0.8 mod_python
-# 0.8 eggs in plugin dir
+# 0.8 trac git integration
+
+# 0.9 eggs in plugin dir
+# 0.9 mod_python
 # 0.9 improve debug
 # 0.9 script generator
+
 [ "$1" == "" ] && _mnok "Project name missing as argument" && exit 3
-VERSION="0.7"
+VERSION="0.8"
 DEBUG=0
 VERBOSE=0
 VALID_PARAM=1
@@ -43,7 +49,7 @@ glib=$HOME/tools/lib/gtrac-lib
 [ -f  $glib ] && source $glib
 _checkParam $* && VALID_PARAM=$?
 
-FAST_CONFIG=1    # 1 Skip package installation
+FAST_CONFIG=0   # 1 Skip package installation
 TRAC_DIR=/var/lib/trac
 PROJECT_DIR=${TRAC_DIR}/${PROJECT}
 PROJECT_URL="http://$(uname -n)/${PROJECT}/"
@@ -54,6 +60,7 @@ TRAC_INI=${PROJECT_DIR}/conf/trac.ini
 TMP_TRAC_INI=/tmp/trac.tmp
 HTDOCS_DIR=${PROJECT_DIR}/htdocs
 LOGO_FILE=${HOME}/tools/data/${PROJECT}/${PROJECT}.png
+ICO_FILE=${HOME}/tools/data/${PROJECT}/${PROJECT}.ico
 HTML_SITE_FILE="${HOME}/tools/data/${PROJECT}/site.html"
 CSS_SITE_FILE="${HOME}/tools/data/${PROJECT}/style.css"
 PROJECT_TEMPLATES_DIR=$PROJECT_DIR/templates
@@ -61,7 +68,7 @@ IMPORT_WIKI_PAGES_DIR=${HOME}/tools/data/${PROJECT}/wiki #  txt Wiki pages to im
 LIB_DIR=${HOME}/tools/lib
 PYTHON_EGGS_DIR="/usr/lib/python2.7/site-packages"
 TRACLOG_FILE=${PROJECT_DIR}/log/${PROJECT}.log
-
+GIT_REPO_DIR=$HOME/tools/.git
 declare -A USERS=( [admin]="admin" [jdum]="123password" [ronan]="guerin" )
 
 GEN_FLAG=1                 # proceed to the trac generation project
@@ -149,7 +156,7 @@ then
     _minf "-- Starting ${PROJECT} plugins customization -----------------------------"
     for customPluginMethod in ${POST_PLUGIN_CUSTOM_METHODS[@]}
     do
-          ${customPluginMethod} && _mok "Custom method is ${customPluginMethod}"
+          ${customPluginMethod} && _minf "Custom method is ${customPluginMethod}"
     done
     _minf "-- Finished ${PROJECT} plugins customization -----------------------------"
 fi

@@ -1,92 +1,54 @@
-[[testing]]
+
 [[BR]]
- = [http://vmtrac/tract/test INTRANET project] =
+ = [http://vmtrac/intranet INTRANET project] =
+[[BR]]
+[[BR]]
+
 {{{#!box
 = * INTRANET
-[[BR]]
-Le projet Intranet est divisé en plusieurs jalons.
-L intranet est ainsi progressivement amélioré afin
-de proposer un environnement de dévelopement performant.
 
 [[BR]]
-
-||'''Jalon'''||'''Description'''||'''Matériel utilisé '''||
-||      '''INTRANET 1'''      ||Mise en place d'une infrastructure limitée [[BR]] permettant un petit de développement collaboratif||2 pc portable, 2 serveurs et un routeur [[BR]] ||
-|| '''INTRANET 2''' || Mise en place d'une infrastructure [[BR]] de développement , utilisant largement des containers, [[BR]] et un rasperry ||2 pc portable, 2 serveurs et un routeur , et un rasperry||
-||'''INTRANET 3'''|| Mise en place d'une infrastructure mixte, [[BR]]et rajoutant des serveurs supplémentaires [[BR]] de test et production ||4 serveur hébergés ainsi que les machine pécédément utiliséés||
-
-[[BR]]
+{{{#!div style="font-size: 140%"
+Le projet [[Color(INTRANET, white/#3383ff/90%)]] a pour but de fournir un environnement de développement performant et redondant.[[BR]]
+Le projet est divisé en différents jalons: [[Color(INTRANET 1, white/#3383ff/80%)]], [[Color(INTRANET 2, white/#3383ff/80%)]], [[Color(INTRANET 3, white/#3383ff/80%)]].[[BR]]
+L intranet évolue ainsi, et disposera de nouvelles fonctionnalités progressivement.[[BR]]
+La partie [[Color(INTRANET 3, white/#3383ff/80%)]], quand lui disposera d'environnements de pré production et de production supplémentaire sur des serveurs hébergés.
 }}}
+[[BR]]
 {{{#!box
-= Vue d'ensemble du jalon intranet 1 du projet.
-ICI
-}}}
+= INTRANET 1
+[[BR]]
+{{{#!div style="font-size: 140%"
+  [[Color(INTRANET 1, white/#3383ff/100%)]] dispose d'une infrastructure limitée, [[BR]]
+  basée sur des machines virtuelles, [[BR]]
+  permettant un petit développement collaboratif.[[BR]]
+  
 {{{#!box
-= Trac setup
- Le gestionnaire de projet Trac comprend un paquet de base, et de plugin
- permettant d'ajouter certaines fonctionnalités.
-
- L'installation de Trac proprement dit est décrite [https://www.hiroom2.com/2017/01/22/centos-7-install-trac/ ici]
- Voir le script la  install Trac sous Centos 7
-
- La liste des plugins installés pour ce projet est consultable [http://vmtrac/trac/test/wiki/plugins ici]
-
-
+{{{#!div style="font-size: 120%"
+ La configuration matériel et logiciel est accessible [http://vmtrac/uuuu/wiki/intranet1-cfg ici]
+}}}
+}}}
+}}}
+}}}
 [[BR]]
-
-= Basic machine's setup
+{{{#!box
+= INTRANET 2
 [[BR]]
-||          ||[[==dum1==]] ==||'''dum2'''||'''app''' ||'''big'''||
-||'''Description'''|| portable de secour ||| portable de development || serveur applicatif || serveur de sauvegarde ||
-|| '''OS''' ||Centos 7 || ubuntu  17.04 ||Centos 7 ||Centos 7 ||
-|| '''CPU'''        || Intel(R) Core(TM) i7-2820QM CPU @ 2.30GHz || Intel(R) Core(TM) i7-2820QM CPU @ 2.30GHz || Intel(R) Core(TM) i7 CPU @ 3GHz ||Intel(R) Core(TM) i5 CPU @ 3,5GHz ||
-|| '''Memory''' ||  16 Giga || 12 Giga || 16 Giga || 8 Giga ||
-|| '''Hard drives'''  ||3 SSD 120 Giga||1 SSD 60 Giga||2 SSD 120 giga||1 SSD, 60 Giga, 5 x 2 Tera, Western digital||
-
-= Specific software installation
-[[BR]]
-||          ||'''dum1'''||'''dum2'''||'''app''' ||'''big'''||
-|| '''ssh server''' ||''[[Color( OPEN , white/blue/120%)]]''||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||
-|| '''ssh client''' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||
-|| '''openvpn client''' ||''[[Color(OPEN, white/blue/120%)]]''||''[[Color(   NA   , white/red/120%)]]''||''[[Color(NA, white/red/120%)]]''||''[[Color(OPEN, white/blue/120%)]]'' ||
-|| '''openvpn server''||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||'[[Color(NA, white/red/120%)]]'' ||
-|| '''Idea (IDE) + Java''' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||
-|| '''VMware''' ||DONE ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||''[[Color(NA, white/red/120%)]]'' ||
-[[BR]]
-
-Some text
-= VM setup
-[[BR]]
-
-||          ||'''Trac'''||'''Git'''||'''Backup''' ||'''Ldap'''||
-||'''VMs setup'''      ||DONE  ||''[[Color(OPEN, white/blue/120%)]]''  ||''[[Color(NA, white/red/120%)]]''    ||''[[Color(NA, white/red/120%)]]'''   ||
-|| '''VM host locations'''      ||dum1 ||dum1 ||big ||dum1 ||
-||'''VM hostname''' ||vmtrac ||vmgit||''[[Color(NA, white/red/120%)]]'' ||vmldap ||
-[[BR]]
-= LXD container's setup
-[[BR]]
-
-||          ||'''Trac'''||'''Git'''||'''Backup''' ||'''Ldap'''||'''Nginx''' ||
-||'''LXD containers setup'''||''[[Color(OPEN, white/blue/120%)]]''  ||''[[Color(OPEN, white/blue/120%)]]''  ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||''[[Color(OPEN, white/blue/120%)]]'' ||
-|| '''Container's host location''' || app || app || big || app || app ||
-||'''Container's hostname''' || lxtrac || lxgit|| lxbk || lxldap || lxngnix ||
-= Idea setup
-[[BR]]
-
-  Le portable dum1 est configuré avec la suite de developement Idea
-  et utilise Git comme gestionnaire de source code
-[[BR]]
-
-= Git setup
-[[BR]]
-  Git est installé sur vmgit et propose un dépot pour le projet INTRANET
-[[BR]]
-
+{{{#!div style="font-size: 140%"
+  [[Color(INTRANET 2, white/#3383ff/100%)]] dispose d'une infrastructure matériel et logiciel plus évoluée [[BR]] 
+  permettant un développement colaboratif. [[BR]]
+  Cette infrastructure sera déployée sur des containers LXD, et sera accessible en VPN. [[BR]]
+}}}
 }}}
 
+{{{#!box
+= INTRANET 3
+[[BR]]
+{{{#!div style="font-size: 140%"
+  [[Color(INTRANET 3, white/#3383ff/100%)]] dispose d'une infrastructure matériel et logiciel professionelle [[BR]] 
+  permettant un développement colaboratif. [[BR]]
+  et disposera de  serveurs supplémentaires hébergés de préproduction et de production.
+}}}
+}}}
 
-
-
-
-
-
+}}}

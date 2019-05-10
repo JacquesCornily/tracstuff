@@ -80,9 +80,21 @@ _setTracIniLogoProject()
   srcPath="site/$(basename ${LOGO_FILE})"           #relative logo website path::
   declare -A header_logo=(["src"]="${srcPath}" ["alt"]="${uProject}" ["width"]="150" ["height"]="100" ["link"]="${PROJECT_URL}")
 
+
+  [ -f ${ICO_FILE} ] && _mdbg 2 "Found an icone to install"
+  _minf "Configure an icon for the project"
+  sudo cp ${ICO_FILE} ${PROJECT_DIR}/htdocs                   && _mdbg 2  "Logo cp ${LOGO_FILE} transfered under ${PROJECT_DIR}/htdocs"
+  sudo trac-admin ${PROJECT_DIR} config set "project" "descr" "A reliable $(_upperCase $PROJECT)" || \
+  _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "project" "footer" "More about<br /><a href="http://$(uname -n)/$PROJECT">$PROJECT</a>" || \
+  _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "project" "name" "$(_upperCase $PROJECT)" || \
+  _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "project" "icon" "site/${PROJECT}.ico" || \
+  _mnok "tracadmin failed with errno=$?"
+
   [ -f ${LOGO_FILE} ] && _mdbg 2 "Found a logo to install"
   sudo cp ${LOGO_FILE} ${PROJECT_DIR}/htdocs                   && _mdbg 2  "Logo cp ${LOGO_FILE} transfered under ${PROJECT_DIR}/htdocs"
-
   for logoSetting in ${!header_logo[@]}
   do
    _mdbg 2  "Will modify ${logoSetting}=${header_logo[${logoSetting}]}"
