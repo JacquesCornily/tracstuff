@@ -12,13 +12,17 @@ PROJECT="uuuu"
 
 [ ! -f ./lib/common-lib ] && echo "Cannot find ./lib/common-lib" && exit 2
 source ./lib/common-lib
+
 touch ./.gitignore
 git config --global core.excludesFile ./.gitignore
+
 _minf "Cleanup on ${REMOTE_HOST}"
+
 eval "${CMD_REMOTE} rm -rf tools/*"
 rsync -auv gtrac lib data ${CMD_REMOTE}:tools
+
 _minf "Test to generate project $PROJECT on ${REMOTE_HOST}"
-eval "${CMD_REMOTE} cd tools; ./gtrac -p $PROJECT"
+eval "${CMD_REMOTE} cd tools; bash -x gtrac -p $PROJECT"
 
 echo -n "Is the generation successful ?"
 read answer
