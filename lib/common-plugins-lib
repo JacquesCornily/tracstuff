@@ -1,27 +1,28 @@
 #!/bin/bash
-# Common methode to install and configure a trac plugin library
-# Author: jdum
-# Date: 30 avril 2019
-# Version 1.1
-#-----------------------------------------------------------------------------------------------
-# Configure the trac.ini logo
 #
+# Author      : jdum
+# Date        : 30 avril 2019
+# Description : Common methode to install and configure a trac plugin library
+# Version     : 1.1
 #-----------------------------------------------------------------------------------------------
-# Configure specific plugins
-# Once the trac project is generated
-# Wrapper
 
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _setTracIniPlugin
+# parameters  : plugin's name
+# Description : Configure specific plugins, once the trac project is generated, with specific plugin methode methodHandler
+# Returns     :
+#
 _setTracIniPlugin()
 {
   pluginName=$1
   found=0
    _mdbg 1  "-- Enter _setTracIniPlugin"
    _minf "Configure $pluginName with trac-admin"
-    [ -f $TRAC_IN ] && sudo chown apache:apache $TRAC_INI
+    [ -f $TRAC_INI ] && sudo chown apache:apache $TRAC_INI
     for methodHandler in ${!METHODS_PLUGINS[@]}
     do
        sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
-      _mdbg 2  "compare ${methodHandler} with ${pluginName}"
+      _mdbg 2  "Compare ${methodHandler} with ${pluginName}"
       if [ "${methodHandler}" == "${pluginName}" ]
       then
             _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${methodHandler}"]} methode"
@@ -33,8 +34,14 @@ _setTracIniPlugin()
     done
     [ "${found}" == "0" ] && _mnok "Invalid plugin name $pluginName found=$found"
     _mdbg 1  "-- Leave _setTracIniPlugin"
+    return 0
 }
-#-----------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _backupTracIni
+# parameters  :
+# Description : Makes a backup of the trac.ini file
+# Returns     : true
+#
 _backupTracIni() #
 {
    _mdbg 1  "-- Enter _backupTracIni"
@@ -46,9 +53,13 @@ _backupTracIni() #
    sudo chmod 666 ${tracIniCopy}               &&  _mdbg 1  "Change to 666 permission for ${tracIniCopy}"
 
    _mdbg 1  "-- Leave _backupTracIni"
+   return 0
 }
-#------------------------------------------------------------------------------------------------
-#
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _installPluginPackage
+# parameters  : plugins name, and type of install easyinstall, svn, or pip tbd
+# Description : install a specific plugin, defined by its url location, its name
+# Returns     : true
 #
 _installPluginPackage()
 {
@@ -65,7 +76,7 @@ _installPluginPackage()
   else
         case  ${installType} in
           easyinstall)  _mdbg 2  "From $(pwd) will perform an $installType"
-                         sudo easy_install -U -Z  ${PLUGINS_URL["${pluginName}"]}  2>&1 | tee --append $LOG_FILE >/dev/null && \
+                         sudo easy_install -U -Z  ${PLUGINS_URL["${pluginName}"]}  --build-directory ${PLUGINS_DIR} 2>&1 | tee --append $LOG_FILE >/dev/null && \
                         _mok "$pluginName has been installed with $installType "
           ;;
           svn) _mdbg 1  "From $(pwd) will perform an $installType"
@@ -88,24 +99,25 @@ _installPluginPackage()
 return 0
 }
 
-#-----------------------------------------------------------------------------------------------
-# ADD settings key+value in a section to the trac.ini bellow a section
-# using a source file and putting the modification in the destination file_
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _setOptionInTracIniSection
+# parameters  : section, e.g components, then key + value
+# Description : Add settings key+value in trac.ini
+# Returns     : true
+#
 _setOptionInTracIniSection()
 {
-
  section="$1"    # e.g [components]
  key="$2"        # key = value
  value=$3
  _mdbg 6  "Enter _setOptionInTracIniSection"
  _mdbg 6  "$section $key $value to add to trac.ini"
-sudo trac-admin ${PROJECT_DIR} config set "$section" "$key" "$value" 2>&1 > /tmp/$0.trac-admin  # && _minf "trac.ini modified with $key=$value added in $section"
-if grep upgrade /tmp/$0.trac-admin 2>&1 >/dev/null
-then
-
+ sudo trac-admin ${PROJECT_DIR} config set "$section" "$key" "$value" 2>&1 > /tmp/$0.trac-admin  # && _minf "trac.ini modified with $key=$value added in $section"
+ if grep upgrade /tmp/$0.trac-admin 2>&1 >/dev/null
+ then
       sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 >/dev/null
-fi
-_mdbg 6  " Leave _setOptionInTracIniSection"
-return 0
+ fi
+ _mdbg 6  " Leave _setOptionInTracIniSection"
+ return 0
 }
 #-----------------------------------------------------------------------------------------------

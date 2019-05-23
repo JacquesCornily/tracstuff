@@ -4,9 +4,17 @@
 # Date: 30 avril 2019
 # Version 1.1
 #
-#!/bin/bash
 
-# Check gtrac command line parameters
+declare -a VALID_LEVELS=( 0 1 2 3 4 5 6 21 ) # supported debug level by gtrac
+
+[ -f ./lib/common-lib ] && source ./lib/common-lib # Import low level methods
+
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _checkParam
+# parameters  : command line paramters
+# Description : Check gtrac command line parameters
+# Returns     : true, or exits if necessary
+#
 _checkParam()
 {
   if [ $# -eq 1 ]
@@ -54,10 +62,11 @@ _checkParam()
     then
           case $1 in
           -d|--debug)
-                if [ $2 -eq 1 ]
-                then
-                    DEBUG=$2;shift;shift;_checkParam $*
-                fi
+                    if ! _isInArray VALID_LEVELS $2
+                    then
+                      { _mnok "Invalid debug level : $2 ,supported one's are 1 2 3 4 5 6 21" ;exit 3; }   # no
+                    fi
+                    { DEBUG=$2;shift;shift;_checkParam $*; }
           ;;
           *) _errorParam
           ;;
@@ -66,15 +75,29 @@ _checkParam()
   else
         _errorParam
   fi
+  return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _errorParam
+# parameters  :
+# Description : Display command line parameter error message
+# Returns     :
+#
 _errorParam()
 {
-  echo "Invalid parameter, see $0 -h"
+  _mnok "Invalid parameter, see $0 -h"
   exit 1
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _helpMe()
 {
-  echo "e.g  $0 -p <PROJECT NAME> or $0 --project <PROJECT NAME>"
-             echo "with debug -d 1 -p <PROJECT NAME>"
+   echo "e.g  $0 -p <PROJECT NAME> or $0 --project <PROJECT NAME>"
+   echo "with debug -d 1 -p <PROJECT NAME>"
   exit 0
 }
+#------------------------------------

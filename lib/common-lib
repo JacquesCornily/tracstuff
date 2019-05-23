@@ -4,14 +4,27 @@
 # Date: 30 avril 2019
 # Version 1.1
 # Add _mdbg
+
+# hash array of supported colors
 declare -A COLORS=( ["black"]="30" ["red"]="31" ["green"]="32" ["brown_orange"]="33"\
                     ["blue"]="34" ["purple"]="35"  ["cyan"]="36" ["light_gray"]="37")
-# returns date formated string -----------------------------------------
+
+
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _getDateLine
+# Parameters  :
+# Description : returns formated date string for application message, e.g [YYYmm][hhss]
+# Returns     :
 _getDateLine()
 {
 	echo -ne "[$(date +"%m-%d-%Y")][$(date +"%T")]"
 }
-# returns a colored string
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _colorString
+# parameters  : first parameter the color name, second the message to be colored
+# Description : Returns a colored string
+# Returns     : true
+#
 _colorString()
 {
 	color="$1"
@@ -24,10 +37,15 @@ _colorString()
 	bold=';1'
 	underlined=4
 	flashing=1
-
 	echo -ne "${escStart}${escColorValue};${escColorValue}${bold}m${string}${escEnd}"
+  return 0
 }
-# Display msg with color tags OK, NOK ,INFO ----------------------------
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _displayColorTag
+# Parameters  :
+# Description : Display tags with different color for tags like OK, NOK ,INFO
+# Returns     :
+#
 _displayColorTag()
 {
 	   logfile="/tmp/$(basename ${0}).log"
@@ -40,79 +58,94 @@ _displayColorTag()
          ;;
          OK)    echo -ne "$(_getDateLine)[$(_colorString 'green' $tag)]  ${text}" | tee --append $logfile
          ;;
-         INFO)  [ $VERBOSE -eq 1 -o $DEBUG -eq 21 ] && echo -ne "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]  ${text}" | tee --append $logfile
-
+         INFO)  if [ $VERBOSE -eq 1 ]
+                then
+                     if [ _isInArray VALID_LEVELS ${DEBUG} ]
+                     then
+                       echo -ne "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]  ${text}" | tee --append $logfile
+                     fi
+                fi
 	   esac
+     return 0
 }
-# Return a time stamp  -----------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _getTimeStamp
+# Parameters  :
+# Description : return a time stamp of the form YYYmmddHHMMSS
+# Returns     : true
+#
 _getTimeStamp()
 {
-
  echo -ne $(date +"%Y%m%d%H%M%S")
-
+ return 0
 }
-
-#- wrapper methods  -----------------------------------------
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _mok
+# Parameters  : the message
+# Description : display OK messages
+# Returns     :
+#
 _mok()
 {
-	_displayColorTag OK  "${1}"
-	echo
+	{ _displayColorTag OK  "${1}";echo; }
+  return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _mnok
+# Parameters  : the message
+# Description : display error messages
+# Returns     : error 4
+#
 _mnok()
 {
-	_displayColorTag NOK  "${1}"
-	echo
+	{ _displayColorTag NOK  "${1}"; echo; return 4;}
+  return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _minf
+# Parameters  : the message, is active if gtrac -v
+# Description : display info messages
+# Returns     :
+#
 _minf()
 {
-	_displayColorTag INFO  "${1}"
-	echo
+	{ _displayColorTag INFO  "${1}";echo;}
+  return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _mdbg
+# Parameters  : the level of debug, the debug message
+# Description : format debug messages, with colored DEBUG tagged based upon debug level
+# Returns     : true, exit if invalid debug level
+#
 _mdbg()
 {
-	debugLevel=$1
+	msgDebugLevel=$1
 	message="$2"
   thisTag='DEBUG'
-  declare VALID_LEVELS=( 1 2 3 4 5 6 21 )
-  [ ${DEBUG} -ne ${debugLevel} ] && return
-	if [[ "${message}" == --* ]]
-  then
-	   		color="cyan"
-		 		coloredMessage=$(_colorString $color "${message}")
-        coloredTag=$(_colorString $color "${thisTag}")
-		 		echo -ne "$(_getDateLine)["$coloredTag"]  ${coloredMessage}" | tee --append $logfile;echo 
-   else
-			 		for dbg in ${VALID_LEVELS[*]}
-					do
-								 if [ ${DEBUG} -eq 1 -o $DEBUG -eq 21 ]
-								 then
-                   color="blue"; coloredTag=$(_colorString $color "$thisTag")
-                   echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
-                 fi
-                 if [ ${DEBUG} -eq 1 -o $DEBUG -eq 21 ]
-								 then
-                      case $DEBUG in
-                        1) color="blue";coloredTag=$(_colorString $color "$thisTag")
-                                   echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
-										    ;;
-						    2|3|4|5|6) color="purple";coloredTag=$(_colorString $color "$thisTag")
-                           echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
-										    ;;
-										 	 21)  color="brown_orange"; coloredTag=$(_colorString $color "$thisTag")
-                            echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo
-											  ;;
-										  esac
-											return 0
-								 fi
-					done
-					echo $(_colorString red "Invalid debug $debugLevel, supported one's are 1 2 3 4 5 6 21" )
-					exit 3
-  fi
-}
-#---------------------------------------------------------------------
 
-# Set logging ------------------------------------------
+  if [ ${msgDebugLevel} -le ${DEBUG} ]
+  then
+  # color selectION  based upon the debug level pass to _mdbg
+     case $msgDebugLevel in
+       1) color="blue"
+			 ;;
+       2|3|4|5|6) color="purple"
+       ;;
+			21)  color="brown_orange"
+			 ;;
+	    esac
+      { coloredTag=$(_colorString $color "$thisTag");echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo;}
+
+		  return 0
+	fi
+}
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _setLogging
+# Parameters  :
+# Description : Initialize the application logfile
+# Returns     : true
+#
 _setLogging()
 {
 	_mdbg 2 "-- Enter _setLogging"
@@ -123,9 +156,34 @@ _setLogging()
 	_mdbg 2 "-- Leave _setLogging"
   return 0
 }
-#---------------------------------------------------
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _upperCase
+# Parameters  : the string to be in uppercase
+# Description : format a string in upper case
+# Returns     : true
+#
 _upperCase()
 {
-echo ${1}|dd conv=ucase 2>/dev/null
+  echo ${1}|dd conv=ucase 2>/dev/null && return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _isInArray
+# Parameters  : The array name's as a string, the element to e found in the array
+# Description : test if an element belongs to an array
+# Return      : true if successfull
+#
+_isInArray () {
+    local array="$1[@]"
+    local seeking=$2
+    local in=1
+    for element in "${!array}"; do
+        if [[ $element == $seeking ]]; then
+            in=0
+            break
+        fi
+    done
+    return $in
+}
+
+#_isInArray arr "a b"  && echo yes || echo no    # no
+#_isInArray arr "d e"  && echo yes || echo no    # yes

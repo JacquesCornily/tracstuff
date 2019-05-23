@@ -45,14 +45,16 @@
 # 0.7 level of debug and clearer messages
 # 0.7 add own browser tab ico
 # 0.8 add exceldownload plugin
-# 0.8 git integration
 # 0.8 wiki imports / project
 # 0.8 ticket imports
-# 0.8 debug incremental messages
+# 0.8 incremental debug messages
+# 0.8 eggs in plugin dir
+
+# 0.8 git integration
+
 
 # 0.9 code review add commmentary !!!
 # 0.9 XML config file
-# 0.9 eggs in plugin dir
 # 0.9 mod_python
 # 0.9 improve debug
 # 0.9 script generator
