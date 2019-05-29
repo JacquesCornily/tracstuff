@@ -184,6 +184,19 @@ _isInArray () {
     done
     return $in
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _isInHash
+# Parameters  : The hash array name's as a string, the key element to see if it belongs to the hash array
+# Description : test if an element belongs to a hash array
+# Return      : true if successfull
+#
+_isInHash() {
+    eval 'local keys=${!'$1'[@]}';
+    eval "case '$2' in
+        ${keys// /|}) return 0 ;;
+        * ) return 1 ;;
+      esac";
+}
 
 #_isInArray arr "a b"  && echo yes || echo no    # no
 #_isInArray arr "d e"  && echo yes || echo no    # yes

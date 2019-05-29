@@ -1,7 +1,7 @@
 #!/bin/bash
 
 [ "$1" == "" ] && _mnok "Project name missing as argument" && exit 3
-VERSION="0.8c"
+VERSION="0.8d"
 DEBUG=0
 VERBOSE=0
 VALID_PARAM=1
@@ -32,7 +32,7 @@ IMPORT_WIKI_PAGES_DIR=${HOME}/tools/data/${PROJECT}/wiki #  txt Wiki pages to im
 LIB_DIR=${HOME}/tools/lib
 PYTHON_EGGS_DIR="/usr/lib/python2.7/site-packages"
 TRACLOG_FILE=${PROJECT_DIR}/log/${PROJECT}.log
-GIT_REPO_DIR=$HOME/tools/.git
+GIT_REPO_DIR=/home/jdum/gtrac/.git
 declare -A USERS=( [admin]="admin" [jdum]="123password" [ronan]="guerin" )
 
 GEN_FLAG=1                 # proceed to the trac generation project
@@ -47,8 +47,8 @@ declare -a libraries=( "common-lib" "common-gen-lib" "common-custom-lib" "common
 
 for lib in ${libraries[@]}
 do
-  echo "Import library: $lib"
-  [ -f ${LIB_DIR}/${lib} ]  && source ${LIB_DIR}/${lib}           # import shell library
+
+  [ -f ${LIB_DIR}/${lib} ]  && source ${LIB_DIR}/${lib} && _mok "Import library: $lib"          # import shell library
 done
 
 _setLogging      &&  _mok "Logging activated for $0"                # Initialize logging
@@ -117,9 +117,11 @@ fi
 #
 if [ "${POST_PLUGIN_CUSTOM_FLAG}" == "1" ]
 then
+
     _minf "-- Starting ${PROJECT} plugins customization -----------------------------"
     for customPluginMethod in ${POST_PLUGIN_CUSTOM_METHODS[@]}
     do
+
           ${customPluginMethod} && _minf "Custom method is ${customPluginMethod}"
     done
     _minf "-- Finished ${PROJECT} plugins customization -----------------------------"

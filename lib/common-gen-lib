@@ -26,6 +26,8 @@ _removePreviousTracStuff()
        sudo cp /tmp/${egg_registry} ${PYTHON_EGGS_DIR}/${egg_registry}
   fi
   [ -d ${PROJECT_DIR} ] && sudo rm -rf ${PROJECT_DIR} && _mdbg 2 "Previous ${PROJECT} project removed"
+  # git repo
+  [ -d ${GIT_REPO_DIR} ] && { sudo rm -rf $( dirname ${GIT_REPO_DIR}); } && _mok "Git repo ${GIT_REPO_DIR} removed"
   _mdbg 1  "-- Leave _removePreviousTracStuff"
   cd
 }
@@ -42,7 +44,8 @@ _install_trac()
     done
  fi
 
-  type pip 2>&1 >/dev/null || pip install --upgrade pip
+  type pip 2>&1 >/dev/null && pip install --upgrade pip && sudo pip install --upgrade  lxml
+  sudo pip install ${XLRD_URL} && _mok "Import xlrd for xls import eventualy"
 
   sudo firewall-cmd --add-service=http --permanent
   sudo firewall-cmd --reload

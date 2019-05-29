@@ -9,9 +9,75 @@
 
 declare -a CUSTOM_METHODS=(  "_setTracIniLogoProject" "_setTicketMilestones" "_setTicketVersions" \
                            "_setTicketComponents" "_setDefaultTicketValues" "_customizeWikiPages" )
-declare -a POST_PLUGIN_CUSTOM_METHODS=( "_setNewLookAndFeel" "_customizeTicketImport" "_setTracLogging")
+declare -a POST_PLUGIN_CUSTOM_METHODS=( "_setNewLookAndFeel" "_customizeTicketImport" "_setTracLogging" "_setGit" )
 
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description : Creates git repo
+# Returns     :
+#
+_setGit()
+{
+  git_url=gtrac.git
+  gitUserHost=git@vmgit
+  _mdbg 1 "-- Enter _setGit"
+  #sudo usermod -a -G  apache jdum
 
+  [ -d ${GIT_REPO_DIR} ] && sudo rm -rf $(dirname ${GIT_REPO_DIR} ) && _mdbg 2 "${GIT_REPO_DIR} removed"
+  cd $HOME
+  git clone ${gitUserHost}:$git_url && _mok "$git_url has been cloned"
+  [ ! -d ${HOME}/gtrac/.git ] && _mnok "NO .git repo" && exit 4
+  cd tools
+  #sudo chown -R apache:apache $(dirname ${GIT_REPO_DIR} )
+
+  cat <<EOF > ${GIT_REPO_DIR}/hooks/post-commit
+#!/bin/bash
+REV=\$(git rev-parse HEAD)
+sudo trac-admin ${PROJECT_DIR} changeset added "(default)"  \$REV
+EOF
+
+cat <<EOF > ${GIT_REPO_DIR}/hooks/post-receive
+#!/bin/bash
+tracenv=${PROJECT_DIR}    # change with your Trac environment's path
+repos="(default)"                   # change with your repository's name
+while read oldrev newrev refname; do
+    if [ "\$oldrev" = 0000000000000000000000000000000000000000 ]; then
+        git rev-list --reverse "\$newrev" --
+    else
+        git rev-list --reverse "\$newrev" "^\$oldrev" --
+    fi | xargs sudo trac-admin "\$tracenv" changeset added "\$repos"
+done
+EOF
+for hook in post-receive post-commit
+do
+  [ -f ${GIT_REPO_DIR}/hooks/$hook ] && chmod +rx ${GIT_REPO_DIR}/hooks/$hook
+done
+if [[ -r $GIT_REPO_DIR && -x $GIT_REPO_DIR  ]]
+then
+    cd $(dirname $GIT_REPO_DIR)
+
+    rev=$(git rev-parse HEAD)
+    sudo trac-admin "$PROJECT_DIR" changeset added "(default)" $rev && _mok "$GIT_REPO_DIR is synced with trac database"
+    sudo trac-admin $PROJECT_DIR repository resync "(default)" $rev && _mok "$GIT_REPO_DIR is resynced with trac database"
+    #sudo trac-admin "$PROJECT_DIR" repository alias "gtrac" "(default)" && _mok "$GIT_REPO_DIR set alias for (default)"
+    #sudo trac-admin "/var/lib/trac/uuuu" changeset added "(default)" $REV && _mok "$GIT_REPO_DIR is synced with trac database"
+  
+    #_mdbg 2 "Repo: $GIT_REPO_DIR is readable"
+else
+     _mnok "Repo is not readable"
+     exit 4
+fi
+
+_mdbg 1 "-- Leave _setGit"
+return 0
+}
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setNewLookAndFeel()
 {
   _mdbg 1 "-- Enter _setNewLookAndFeel"
@@ -21,8 +87,14 @@ _setNewLookAndFeel()
   [ -f $CSS_SITE_FILE ]  && sudo cp $CSS_SITE_FILE $HTDOCS_DIR
   [ -f $CSS_SITE_FILE ]  && sudo chown -R apache:apache $HTDOCS_DIR
   _mdbg 1 "-- Leave _setNewLookAndFeel"
+  return 0
 }
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _customizeWikiPages()
 {
  _mdbg 1  "-- Enter _customizeWikiPages"
@@ -39,6 +111,12 @@ _customizeWikiPages()
  _mdbg 1  "-- Leave _customizeWikiPages"
  return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _customizeTicketImport()
 {
   _mdbg 1  "-- Enter customizeTicketImport"
@@ -49,30 +127,36 @@ _customizeTicketImport()
   _mdbg 1  "-- Leave customizeTicketImport"
   return 0
 }
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setTracLogging()
 {
+  declare -A logging=(["log_file"]="${PROJECT}.log" ["log_type"]="file"  ["log_level"]="DEBUG" ["log_format"]='($(thread)d) Trac[$(basename)s:$(module)s] $(levelname)s: $(message)s' )
   _mdbg 1  "-- Enter _setTracLogging"
   sudo touch $PROJECT_DIR/log/${PROJECT}.log
 
   [ -f $PROJECT_DIR/log/${PROJECT}.log ] && _minf "$(ls -l $PROJECT_DIR/log)" && \
   sudo chown apache:apache $PROJECT_DIR/log/${PROJECT}.log && _minf "$(ls -l $PROJECT_DIR/log)"
 
-  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_file" "${PROJECT}.log" 2>&1 > /dev/null || \
-  _mnok "tracadmin failed with errno=$?"
-
-  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_type" "file" || \
-  _mnok "tracadmin failed with errno=$?"
-
-  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_level" "DEBUG" || \
-  _mnok "tracadmin failed with errno=$?"
-
-  sudo trac-admin ${PROJECT_DIR} config set "logging" "log_format" '($(thread)d) Trac[$(basename)s:$(module)s] $(levelname)s: $(message)s' || \
-  _mnok "tracadmin failed with errno=$?"
+  for option in ${!logging[*]}
+  do
+    sudo trac-admin ${PROJECT_DIR} config set "logging" "${option}" "${logging["$option"]}" 2>&1 > /dev/null || \
+    _mnok "tracadmin failed with errno=$?"
+  done
 
   _mdbg 1  "-- Leave _setTracLogging"
   return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setTracIniLogoProject()
 {
   _mdbg 1  "-- Enter _setTracIniLogoProject"
@@ -106,8 +190,12 @@ _setTracIniLogoProject()
  _mdbg 1  "-- Leave _setTracIniLogoProject"
  return 0
 }
-
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setTicketMilestones()
 {
      _mdbg 1  "-- Enter _setTicketMilestones"
@@ -126,6 +214,12 @@ _setTicketVersions()
    _mdbg 1  "-- Leave _setTicketVersions"
    return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setTicketComponents()
 {
     _mdbg 1  "-- Enter _setTicketComponents"
@@ -142,6 +236,12 @@ _setTicketComponents()
     _mdbg 1  "-- Leave _setTicketComponents"
     return 0
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _setDefaultTicketValues()
 {
   _mdbg 1  "-- Enter _setDefaultTicketValues"

@@ -15,27 +15,36 @@
 _setTracIniPlugin()
 {
   pluginName=$1
-  found=0
+#   found=0
    _mdbg 1  "-- Enter _setTracIniPlugin"
    _minf "Configure $pluginName with trac-admin"
     [ -f $TRAC_INI ] && sudo chown apache:apache $TRAC_INI
-    for methodHandler in ${!METHODS_PLUGINS[@]}
-    do
-       sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
-      _mdbg 2  "Compare ${methodHandler} with ${pluginName}"
-      if [ "${methodHandler}" == "${pluginName}" ]
-      then
-            _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${methodHandler}"]} methode"
+    if _isInHash METHODS_PLUGINS ${pluginName}
+    then
+        sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
+        _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${pluginName}"]} methode"
+      ${METHODS_PLUGINS["${pluginName}"]} && _mdbg 2  "$pluginName customized with ${METHODS_PLUGINS["${pluginName}"]} method"
+      _installPluginPackage  "${pluginName}"
 
-            ${METHODS_PLUGINS["${methodHandler}"]}
-            _installPluginPackage  "${pluginName}"
-            found=1
-      fi
-    done
-    [ "${found}" == "0" ] && _mnok "Invalid plugin name $pluginName found=$found"
-    _mdbg 1  "-- Leave _setTracIniPlugin"
+    fi
     return 0
 }
+#    for methodHandler in ${!METHODS_PLUGINS[@]}
+#    do
+#       sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
+#      _mdbg 2  "Compare ${methodHandler} with ${pluginName}"
+#      if [ "${methodHandler}" == "${pluginName}" ]
+#      then
+#            _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${methodHandler}"]} methode"
+#
+#            ${METHODS_PLUGINS["${methodHandler}"]}
+#            _installPluginPackage  "${pluginName}"
+#            found=1
+#      fi
+#    done
+#    [ "${found}" == "0" ] && _mnok "Invalid plugin name $pluginName found=$found"
+#    _mdbg 1  "-- Leave _setTracIniPlugin"
+
 #--------------------------------------------------------------------------------------------------------------
 # Name        : _backupTracIni
 # parameters  :
@@ -112,7 +121,8 @@ _setOptionInTracIniSection()
  value=$3
  _mdbg 6  "Enter _setOptionInTracIniSection"
  _mdbg 6  "$section $key $value to add to trac.ini"
- sudo trac-admin ${PROJECT_DIR} config set "$section" "$key" "$value" 2>&1 > /tmp/$0.trac-admin  # && _minf "trac.ini modified with $key=$value added in $section"
+ sudo rm -f /tmp/$0.trac-admin
+ sudo trac-admin ${PROJECT_DIR} config set "$section" "$key" "$value" 2>&1 > /tmp/$0.trac-admin   && _mdbg 6 "trac.ini modified with $key=$value added in $section"
  if grep upgrade /tmp/$0.trac-admin 2>&1 >/dev/null
  then
       sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 >/dev/null

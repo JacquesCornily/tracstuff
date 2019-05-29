@@ -27,7 +27,12 @@ declare -A PLUGINS_URL=(["customfieldadmin"]="https://trac-hacks.org/svn/customf
 
 XLRD_URL="https://files.pythonhosted.org/packages/aa/05/ec9d4fcbbb74bbf4da9f622b3b61aec541e4eccf31d3c60c5422ec027ce2/xlrd-1.2.0.tar.gz"
 
-#-----------------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _checkParam
+# parameters  : command line paramters
+# Description : Check gtrac command line parameters
+# Returns     : true, or exits if necessary
+#
 _configureFreemindMacro()
 {
     _mdbg 1   "-- Enter _configureFreemindMacro"
@@ -48,6 +53,12 @@ _configureFreemindMacro()
     done
     _mdbg 1   "-- Enter _configureFreemindMacro"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureExcelDownload()
 {
     _mdbg 1   "-- Enter _configureExcelDownload"
@@ -62,7 +73,12 @@ _configureExcelDownload()
     sudo easy_install openpyxl lxml && _mok "Library openpyxl lxml successfully installed"
     _mdbg 1   "-- Leave _configureExcelDownload"
 }
-
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureGit()
 {
     _mdbg 1   "-- Enter _configureGit"
@@ -78,23 +94,30 @@ _configureGit()
      _mdbg 2 "tracadmin ${newSections[1]} is enabled in components"
      newValue=$(sudo trac-admin ${PROJECT_DIR} config get "components" "${pluginEnablingOptionValues[0]}")
      _mdbg 2 "tracadmin enabled ${newSections[1]} with ${pluginEnablingOptionValues[0]} = $newValue"
+
      for option in ${!git[*]}
      do
-         _mdbg 2  "[${newSections[1]}] add $option = ${git["$option"]} in trac.ini"      # Keep previous index logic
-        _setOptionInTracIniSection "${newSections[1]}" "$option" "${git[$option]}"
+       _mdbg 2  "[${newSections[1]}] add $option = ${git["$option"]} in trac.ini"      # Keep previous index logic
+      _setOptionInTracIniSection "${newSections[1]}" "$option" "${git[$option]}"
      done
      for option in ${!trac[*]}
      do
          _mdbg 2  "[${newSections[2]}] add $option = ${trac["$option"]} in trac.ini"      # Keep previous index logic
-        _setOptionInTracIniSection "${newSections[1]}" "$option" "${trac[$option]}"
+        _setOptionInTracIniSection "${newSections[2]}" "$option" "${trac[$option]}"
      done
      for option in ${!repositories[*]}
      do
          _mdbg 2  "[${newSections[3]}] add $option = ${repositories["$option"]} in trac.ini"      # Keep previous index logic
-        _setOptionInTracIniSection "${newSections[1]}" "$option" "${repositories[$option]}"
+        _setOptionInTracIniSection "${newSections[3]}" "$option" "${repositories[$option]}"
      done
     _mdbg 1   "-- Leave _configureGit"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureTicketImport()
 {
     _mdbg 1   "-- Enter _configureTicketImport"
@@ -117,16 +140,22 @@ _configureTicketImport()
    for option in ${!trac[*]}
    do
        _mdbg 2  "[${newSections[2]}] add $option = ${trac["$option"]} in trac.ini"      # Keep previous index logic
-       _setOptionInTracIniSection "${newSections[1]}" "$option" "${trac[$option]}"
+       _setOptionInTracIniSection "${newSections[2]}" "$option" "${trac[$option]}"
    done
    for option in ${!importer[*]}
    do
       _mdbg 2 "[${newSections[3]}] add $option = ${importer["$option"]} in trac.ini"      # Keep previous index logic
-      _setOptionInTracIniSection "${newSections[1]}" "$option" "${importer[$option]}"
+      _setOptionInTracIniSection "${newSections[3]}" "$option" "${importer[$option]}"
    done
-   sudo pip install ${XLRD_URL} && _mok "Import xlrd for xls import"
+   
   _mdbg 1   "-- Leave _configureTicketImport"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureTags()
 {
   _mdbg 1   "-- Enter _configureTags"
@@ -148,6 +177,12 @@ _configureTags()
    _setOptionInTracIniSection "${newSections[1]}" "$option" "${tags[$option]}"
   done
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureBreadCrumsNav()
 {
   declare -a newSections=( "components" "breadcrumbs") # New section
@@ -167,6 +202,12 @@ _configureBreadCrumsNav()
   done
   _mdbg 1   "-- Leave _configureTags"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureWikiToPdf()
 {
   # tbd check /var/lib/trac/IS/conf/htmldoc.css
@@ -209,6 +250,12 @@ _configureWikiToPdf()
   done
   _mdbg 1   "-- Leave _configureTags"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureStractistics()
 {
   _mdbg 1   "-- Enter _configureStractistics"
@@ -231,6 +278,12 @@ _configureStractistics()
   done
   _mdbg 1  "Leave_configureStractistics"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description :
+# Returns     :
+#
 _configureWikiExtras()
 {
     _mdbg 1  "-- Enter _configureWikiExtras"
@@ -261,32 +314,38 @@ _configureWikiExtras()
   _minf "Configure wikiextras"
   for option in ${!wikiextras[@]}
   do
-    _mdbg 2 "[${newSections[2]}] add  $option = ${wikiextras["$option"]} in trac.ini"      # Keep previous index logic
+    _mdbg 2 "[${newSections[1]}] add  $option = ${wikiextras["$option"]} in trac.ini"      # Keep previous index logic
     _setOptionInTracIniSection "${newSections[1]}" "$option" "${wikiextras[$option]}"
   done
   # Set [wikiextras_smileys] in trac.ini
   _minf "Configure wikiextras_smileys"
   for option in ${!wikiextras_smileys[@]}
   do
-    _mdbg 2 "[${newSections[3]}] add  $option = ${wikiextras_smileys["$option"]} in trac.ini"      # Keep previous index logic
+    _mdbg 2 "[${newSections[2]}] add  $option = ${wikiextras_smileys["$option"]} in trac.ini"      # Keep previous index logic
     _setOptionInTracIniSection "${newSections[2]}" "$option" "${wikiextras_smileys[$option]}"
   done
   # Set [wikiextras_symbols]
   _minf "Configure wikiextras_symbols"
   for option in ${!wikiextras_symbols[@]}
   do
-    _mdbg 2 "[${newSections[4]}] add  $option = ${wikiextras_symbols["$option"]} in trac.ini"      # Keep previous index logic
+    _mdbg 2 "[${newSections[3]}] add  $option = ${wikiextras_symbols["$option"]} in trac.ini"      # Keep previous index logic
     _setOptionInTracIniSection "${newSections[3]}" "$option" "${wikiextras_symbols[$option]}"
   done
   # Set [wikiextras_symbols]
   _minf "Configure _custom_phrases"
   for option in ${!wikiextras_custom_phrases[@]}
   do
-    _mdbg 2 "[${newSections[5]}] add  $option = ${wikiextras_custom_phrases["$option"]} in trac.ini"      # Keep previous index logic
+    _mdbg 2 "[${newSections[4]}] add  $option = ${wikiextras_custom_phrases["$option"]} in trac.ini"      # Keep previous index logic
     _setOptionInTracIniSection "${newSections[4]}" "$option" "${wikiextras_custom_phrases[$option]}"
   done
   _mdbg 1  "-- Leave _configureWikiExtras"
 }
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# Parameters  :
+# Description :
+# Returns     :
+#
 _configureCustomFieldAdmin()
 {
  _mdbg 1  "-- Enter CustomFieldAdmin"
