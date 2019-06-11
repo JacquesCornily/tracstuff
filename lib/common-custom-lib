@@ -9,8 +9,43 @@
 
 declare -a CUSTOM_METHODS=(  "_setTracIniLogoProject" "_setTicketMilestones" "_setTicketVersions" \
                            "_setTicketComponents" "_setDefaultTicketValues" "_customizeWikiPages" )
-declare -a POST_PLUGIN_CUSTOM_METHODS=( "_setNewLookAndFeel" "_customizeTicketImport" "_setTracLogging" "_setGit" )
+declare -a POST_PLUGIN_CUSTOM_METHODS=( "_setNewLookAndFeel" "_customizeTicketImport" "_setTracLogging" "_setGit" "setXmlRpc" "_setTracStats")
 
+
+
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description : configure specific xmlsettings with trac-admin
+# Returns     :
+#
+_setTracStats()
+{
+  _mdbg 1 "-- Enter _setTracStats"
+
+  #sudo trac-admin $PROJECT_DIR permission add authenticated STATS_VIEW  || _die "Cannot set STATS_VIEW permission to authenticated"
+
+  _mok "XML_RPC permission granted to authenticated users"
+
+  _mdbg 1 "-- Leave _setTracStats"
+}
+#---
+#--------------------------------------------------------------------------------------------------------------
+# Name        :
+# parameters  :
+# Description : configure specific xmlsettings with trac-admin
+# Returns     :
+#
+_setXmlRpc()
+{
+  _mdbg 1 "-- Enter _setXmlRpc"
+
+  sudo trac-admin $PROJECT_DIR permission add authenticated XML_RPC  || _die "Cannot register XML_RPC permission to authenticated"
+
+  _mok "XML_RPC permission granted to authenticated users"
+
+  _mdbg 1 "-- Leave _setXmlRpc"
+}
 #--------------------------------------------------------------------------------------------------------------
 # Name        :
 # parameters  :
@@ -19,28 +54,44 @@ declare -a POST_PLUGIN_CUSTOM_METHODS=( "_setNewLookAndFeel" "_customizeTicketIm
 #
 _setGit()
 {
-  git_url=gtrac.git
-  gitUserHost=git@vmgit
-  _mdbg 1 "-- Enter _setGit"
-  #sudo usermod -a -G  apache jdum
 
-  [ -d ${GIT_REPO_DIR} ] && sudo rm -rf $(dirname ${GIT_REPO_DIR} ) && _mdbg 2 "${GIT_REPO_DIR} removed"
-  cd $HOME
-  git clone ${gitUserHost}:$git_url && _mok "$git_url has been cloned"
-  [ ! -d ${HOME}/gtrac/.git ] && _mnok "NO .git repo" && exit 4
-  cd tools
-  #sudo chown -R apache:apache $(dirname ${GIT_REPO_DIR} )
+  local aliasRepo=$0
+  local defaultRepoName='(default)'
+
+  _minf "Setup git depot on vmgit server"
+
+  [ -d ${GIT_REPO_DIR} ] && sudo rm -rf ${GIT_REPO_DIR}
+
+  sudo mkdir -p ${GIT_REPO_DIR} || _die "Cannot create : ${GIT_REPO_DIR}"
+  sudo chown jdum:apache ${GIT_REPO_DIR}
+
+  _mok "Created directory ${GIT_REPO_DIR}"
+
+  cd "${GIT_REPO_DIR}";
+  git init --bare || _die "Cannot create ${GIT_REPO_DIR} git bare repository"
+
+  _minf "${GIT_REPO_DIR} is a bare repository"
+
+  if sudo -u apache git --git-dir=${GIT_REPO_DIR} count-objects -v
+  then
+     _minf "Permissions on $GIT_DEPOT_DIR are fine"
+  else
+      _die "Invalid access right on $GIT_DEPOT_DIR"
+  fi
+
 
   cat <<EOF > ${GIT_REPO_DIR}/hooks/post-commit
 #!/bin/bash
 REV=\$(git rev-parse HEAD)
-sudo trac-admin ${PROJECT_DIR} changeset added "(default)"  \$REV
+sudo trac-admin ${PROJECT_DIR} changeset added "${defaultRepoName}"  \$REV
 EOF
+
+[ $? -eq 0 ] && _mok "Post commit hook in place"
 
 cat <<EOF > ${GIT_REPO_DIR}/hooks/post-receive
 #!/bin/bash
 tracenv=${PROJECT_DIR}    # change with your Trac environment's path
-repos="(default)"                   # change with your repository's name
+repos="${defaultRepoName}"                   # change with your repository's name
 while read oldrev newrev refname; do
     if [ "\$oldrev" = 0000000000000000000000000000000000000000 ]; then
         git rev-list --reverse "\$newrev" --
@@ -49,29 +100,39 @@ while read oldrev newrev refname; do
     fi | xargs sudo trac-admin "\$tracenv" changeset added "\$repos"
 done
 EOF
+[ $? -eq 0 ] && _mok "Post receive hook in place"
+
 for hook in post-receive post-commit
 do
   [ -f ${GIT_REPO_DIR}/hooks/$hook ] && chmod +rx ${GIT_REPO_DIR}/hooks/$hook
 done
 if [[ -r $GIT_REPO_DIR && -x $GIT_REPO_DIR  ]]
 then
-    cd $(dirname $GIT_REPO_DIR)
-
+    sudo trac-admin "$PROJECT_DIR" repository add "${defaultRepoName}" ${GIT_REPO_DIR} git || _die "trac-admin repository add failed"
+    _mok "repository added to $PROJECT_DIR"
+    cd $GIT_REPO_DIR # has to be done in the .git directory, not sure
     rev=$(git rev-parse HEAD)
-    sudo trac-admin "$PROJECT_DIR" changeset added "(default)" $rev && _mok "$GIT_REPO_DIR is synced with trac database"
-    sudo trac-admin $PROJECT_DIR repository resync "(default)" $rev && _mok "$GIT_REPO_DIR is resynced with trac database"
-    #sudo trac-admin "$PROJECT_DIR" repository alias "gtrac" "(default)" && _mok "$GIT_REPO_DIR set alias for (default)"
-    #sudo trac-admin "/var/lib/trac/uuuu" changeset added "(default)" $REV && _mok "$GIT_REPO_DIR is synced with trac database"
-  
-    #_mdbg 2 "Repo: $GIT_REPO_DIR is readable"
+    _minf "Found rev=>$rev<"
+    if [ "$rev" == "HEAD" ] # The repo is blank
+    then
+          cd $HOME
+          [ -d $HOME/gtrac ] && sudo rm -rf $HOME/gtrac
+          git clone jdum@vmtrac:${GIT_REPO_DIR}
+          cd gtrac
+          > F1;git add . ; git add F1; git commit -m "Initial commit F1" ; git push origin master
+    fi
+    rev=$(git rev-parse HEAD)
+    sudo trac-admin "$PROJECT_DIR" changeset added ${defaultRepoName} $rev              || _die "trac-admin changeset added failed"
+    sudo trac-admin "$PROJECT_DIR" repository resync ${defaultRepoName} $rev              || _die "trac-admin repository resync failed"
+    #sudo trac-admin "$PROJECT_DIR" repository alias "${repoAlias}" ${defaultRepoName}   || _die "trac-admin repository alias failed"
 else
-     _mnok "Repo is not readable"
-     exit 4
+     _die "Repo is not readable"
 fi
 
 _mdbg 1 "-- Leave _setGit"
 return 0
 }
+
 #--------------------------------------------------------------------------------------------------------------
 # Name        :
 # parameters  :
@@ -82,8 +143,12 @@ _setNewLookAndFeel()
 {
   _mdbg 1 "-- Enter _setNewLookAndFeel"
 
-  [ -f $HTML_SITE_FILE ] && sudo cp $HTML_SITE_FILE $PROJECT_TEMPLATES_DIR
-  [ -f $HTML_SITE_FILE ] && sudo chown -R apache:apache $PROJECT_TEMPLATES_DIR
+  for htmlFile in $HTML_SITE_FILE $HTML_THEME_FILE
+  do
+      [ -f ${htmlFile} ] && sudo cp ${htmlFile} $PROJECT_TEMPLATES_DIR
+      [ -f ${htmlFile} ] && sudo chown -R apache:apache $PROJECT_TEMPLATES_DIR
+  done
+
   [ -f $CSS_SITE_FILE ]  && sudo cp $CSS_SITE_FILE $HTDOCS_DIR
   [ -f $CSS_SITE_FILE ]  && sudo chown -R apache:apache $HTDOCS_DIR
   _mdbg 1 "-- Leave _setNewLookAndFeel"
@@ -105,7 +170,7 @@ _customizeWikiPages()
        for page_txt in *.txt
        do
          _mdbg 2  "Will import $page_txt"
-         sudo trac-admin $PROJECT_DIR wiki import ${page_txt%.txt} ${page_txt} 2>&1 >/dev/null && _mdbg 2 "$page_txt has been imported in Wiki"
+         sudo trac-admin $PROJECT_DIR wiki import ${page_txt%.txt} ${page_txt} 2>&1 >/dev/null || _die "Cannot import wiki page :$page_txt"
        done
  fi
  _mdbg 1  "-- Leave _customizeWikiPages"
@@ -122,7 +187,8 @@ _customizeTicketImport()
   _mdbg 1  "-- Enter customizeTicketImport"
   for user in ${!USERS[*]}
   do
-    sudo trac-admin ${PROJECT_DIR}  permission add ${user} IMPORT_EXECUTE && _minf " $user got IMPORT_EXECUTE permission"
+    sudo trac-admin ${PROJECT_DIR}  permission add ${user} IMPORT_EXECUTE || _die "Cannot add permission IMPORT_EXECUTE for $user"
+    _minf " $user got IMPORT_EXECUTE permission"
   done
   _mdbg 1  "-- Leave customizeTicketImport"
   return 0
@@ -144,8 +210,7 @@ _setTracLogging()
 
   for option in ${!logging[*]}
   do
-    sudo trac-admin ${PROJECT_DIR} config set "logging" "${option}" "${logging["$option"]}" 2>&1 > /dev/null || \
-    _mnok "tracadmin failed with errno=$?"
+    sudo trac-admin ${PROJECT_DIR} config set "logging" "${option}" "${logging["$option"]}" 2>&1 > /dev/null || _die "tracadmin config set logging failed"
   done
 
   _mdbg 1  "-- Leave _setTracLogging"
@@ -160,29 +225,25 @@ _setTracLogging()
 _setTracIniLogoProject()
 {
   _mdbg 1  "-- Enter _setTracIniLogoProject"
-  uProject=$(_upperCase "${PROJECT}")
-  srcPath="site/$(basename ${LOGO_FILE})"           #relative logo website path::
+  local uProject=$(_upperCase "${PROJECT}")
+  local srcPath="site/$(basename ${LOGO_FILE})"           #relative logo website path::
   declare -A header_logo=(["src"]="${srcPath}" ["alt"]="${uProject}" ["width"]="150" ["height"]="100" ["link"]="${PROJECT_URL}")
 
 
   [ -f ${ICO_FILE} ] && _mdbg 2 "Found an icone to install"
-  _minf "Configure an icon for the project"
+  _minf "Configure the icon  project"
   sudo cp ${ICO_FILE} ${PROJECT_DIR}/htdocs                   && _mdbg 2  "Logo cp ${LOGO_FILE} transfered under ${PROJECT_DIR}/htdocs"
-  sudo trac-admin ${PROJECT_DIR} config set "project" "descr" "A reliable $(_upperCase $PROJECT)" || \
-  _mnok "tracadmin failed with errno=$?"
-  sudo trac-admin ${PROJECT_DIR} config set "project" "footer" "More about<br /><a href="http://$(uname -n)/$PROJECT">$PROJECT</a>" || \
-  _mnok "tracadmin failed with errno=$?"
-  sudo trac-admin ${PROJECT_DIR} config set "project" "name" "$(_upperCase $PROJECT)" || \
-  _mnok "tracadmin failed with errno=$?"
-  sudo trac-admin ${PROJECT_DIR} config set "project" "icon" "site/${PROJECT}.ico" || \
-  _mnok "tracadmin failed with errno=$?"
+  sudo trac-admin ${PROJECT_DIR} config set "project" "descr" "A reliable $(_upperCase $PROJECT)"                                   || _die "tracadmin config set failed "
+  sudo trac-admin ${PROJECT_DIR} config set "project" "footer" "More about<br /><a href="http://$(uname -n)/$PROJECT">$PROJECT</a>" || _die "tracadmin config set failed "
+  sudo trac-admin ${PROJECT_DIR} config set "project" "name" "$(_upperCase $PROJECT)"                                               || _die "tracadmin config set failed "
+  sudo trac-admin ${PROJECT_DIR} config set "project" "icon" "site/${PROJECT}.ico"                                                  || _die "tracadmin config set failed "
 
   [ -f ${LOGO_FILE} ] && _mdbg 2 "Found a logo to install"
   sudo cp ${LOGO_FILE} ${PROJECT_DIR}/htdocs                   && _mdbg 2  "Logo cp ${LOGO_FILE} transfered under ${PROJECT_DIR}/htdocs"
   for logoSetting in ${!header_logo[@]}
   do
    _mdbg 2  "Will modify ${logoSetting}=${header_logo[${logoSetting}]}"
-    sudo trac-admin ${PROJECT_DIR} config set "header_logo" "${logoSetting}" "${header_logo[${logoSetting}]}" || _mnok "tracadmin failed with errno=$?"
+    sudo trac-admin ${PROJECT_DIR} config set "header_logo" "${logoSetting}" "${header_logo[${logoSetting}]}" || _die "tracadmin config set failed "
     newValue=$(sudo trac-admin ${PROJECT_DIR} config get "header_logo" "${logoSetting}")                      && \
     _mdbg 3  "[header_logo] has new settings ${logoSetting} = ${header_logo[${logoSetting}]}"
   done
@@ -199,10 +260,11 @@ _setTracIniLogoProject()
 _setTicketMilestones()
 {
      _mdbg 1  "-- Enter _setTicketMilestones"
-   title=$(_upperCase "${PROJECT}")
+   local title=$(_upperCase "${PROJECT}")
    for i in 1 2 3 4
    do
-     sudo trac-admin $PROJECT_DIR milestone rename "milestone${i}" "${title}${i}" && _mdbg 2  "milestone${i} changed value to ${title}${i}"
+     sudo trac-admin $PROJECT_DIR milestone rename "milestone${i}" "${title}${i}" || _die "tracadmin  milestone rename failed "
+     _mdbg 2  "milestone${i} changed value to ${title}${i}"
    done
    _mdbg 1  "-- Leave _setTicketMilestones"
    return 0
@@ -210,7 +272,8 @@ _setTicketMilestones()
 _setTicketVersions()
 {
    _mdbg 1  "-- Enter _setTicketVersions"
-   sudo trac-admin $PROJECT_DIR version add "3.0" && _mdbg 6 "Add new ticket version"
+   sudo trac-admin $PROJECT_DIR version add "3.0"  || _die "tracadmin  version add failed "
+  _mdbg 6 "Add new ticket version"
    _mdbg 1  "-- Leave _setTicketVersions"
    return 0
 }
@@ -231,7 +294,8 @@ _setTicketComponents()
     for component in "Hardware installation" "Hardware configuration" "Software installation" "Software configuration" \
                       "Script development" "Application development" "Network management"
     do
-              sudo trac-admin $PROJECT_DIR component add  "$component" 2>&1 >/dev/null && _mdbg 2 "Removed $component"
+              sudo trac-admin $PROJECT_DIR component add  "$component" 2>&1 >/dev/null || _die "tracadmin component add failed "
+              _mdbg 2 "Removed $component"
     done
     _mdbg 1  "-- Leave _setTicketComponents"
     return 0
@@ -245,10 +309,16 @@ _setTicketComponents()
 _setDefaultTicketValues()
 {
   _mdbg 1  "-- Enter _setDefaultTicketValues"
-  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_type"      "task"                     2>&1 >/dev/null && _mdbg 2  "$PROJECT with default_type task"
-  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_version"   "1.0"                      2>&1 >/dev/null && _mdbg 2  "$PROJECT with default_version 1.0"
-  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_component" "Software installation"    2>&1 >/dev/null && _mdbg 2  "$PROJECT with default_component Software installation"
-  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_milestone" "$(_upperCase $PROJECT)1"  2>&1 >/dev/null && _mdbg 2  "$PROJECT with default_milestone is ${PROJECT}1"
+
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_type"      "task"                     2>&1 >/dev/null || _die "tracadmin config set failed "
+  _mdbg 2  "$PROJECT with default_type task"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_version"   "1.0"                      2>&1 >/dev/null || _die "tracadmin config set failed "
+  _mdbg 2  "$PROJECT with default_version 1.0"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_component" "Software installation"    2>&1 >/dev/null || _die "tracadmin config set failed "
+  _mdbg 2  "$PROJECT with default_component Software installation"
+  sudo trac-admin ${PROJECT_DIR} config set "ticket" "default_milestone" "$(_upperCase $PROJECT)1"  2>&1 >/dev/null || _die "tracadmin config set failed "
+  _mdbg 2  "$PROJECT with default_milestone is ${PROJECT}1"
+
   _mdbg 1  "-- Enter _setDefaultTicketValues"
   return 0
 }

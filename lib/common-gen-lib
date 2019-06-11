@@ -5,10 +5,13 @@
 
 
 # Install necessary package to run trac
+
 PACKAGES=( "epel-release" "expect" "svn" "trac" "mod_wsgi" "htmldoc" "enscript" "graphviz" "python-pip")
+XLRD_URL="https://files.pythonhosted.org/packages/aa/05/ec9d4fcbbb74bbf4da9f622b3b61aec541e4eccf31d3c60c5422ec027ce2/xlrd-1.2.0.tar.gz"
+
 _removePreviousTracStuff()
 {
-  egg_registry="easy-install.pth"
+  local eggsRegistry="easy-install.pth"
   _mdbg 1  "-- Enter _removePreviousTracStuff"
   sudo yum remove -y trac 2>&1 | tee --append $LOG_FILE >/dev/null && _minf "Trac package has been removed"
 
@@ -22,8 +25,8 @@ _removePreviousTracStuff()
   fi
   if [ -f ${PYTHON_EGGS_DIR}/${egg_registry} ]
   then
-       sudo grep -v '.egg' ${PYTHON_EGGS_DIR}/${egg_registry} > /tmp/${egg_registry} && _mdbg 1  "${egg_registry} cleaned up"
-       sudo cp /tmp/${egg_registry} ${PYTHON_EGGS_DIR}/${egg_registry}
+       sudo grep -v '.egg' ${PYTHON_EGGS_DIR}/${eggsRegistry} > /tmp/${eggsRegistry} && _mdbg 1  "${eggsRegistry} cleaned up"
+       sudo cp /tmp/${eggsRegistry} ${PYTHON_EGGS_DIR}/${eggsRegistry}
   fi
   [ -d ${PROJECT_DIR} ] && sudo rm -rf ${PROJECT_DIR} && _mdbg 2 "Previous ${PROJECT} project removed"
   # git repo
@@ -42,9 +45,13 @@ _install_trac()
         _minf "Installing $pkg"
         sudo yum install -y $pkg 2>&1 | sudo tee --append $LOG_FILE >/dev/null && _minf "$pkg has been installed"
     done
+    _mdbg 2 "install openpyxl lxml"
+    sudo easy_install openpyxl  || _die "Can't install openpyxl "
+    sudo easy_install lxml      || _die "Can't install lxml"
+    _mok "Library openpyxl lxml successfully installed"
  fi
 
-  type pip 2>&1 >/dev/null && pip install --upgrade pip && sudo pip install --upgrade  lxml
+  type pip 2>&1 >/dev/null && sudo pip install --upgrade pip && sudo pip install --upgrade  lxml
   sudo pip install ${XLRD_URL} && _mok "Import xlrd for xls import eventualy"
 
   sudo firewall-cmd --add-service=http --permanent
@@ -64,9 +71,13 @@ trap "rm $TMP* 2>/dev/null" 0
 # Register users with apache and trac project
 _create_digest()
 {
+   local filename=$1
+   local realm=$2
+   local username=$3
+   local password=$4
+   local options=
   _mdbg 1  "-- Enter _create_digest"
   _minf "add users to $(echo ${PROJECT}|tr [a-z] [A-Z]) project ......"
-  filename=$1;realm=$2;username=$3;password=$4;options=
 
 	_mdbg 2  "filename = $filename"
 	_mdbg 2  "realm    = $realm"
@@ -125,8 +136,9 @@ WSGIScriptAlias /test /var/www/html/trac/test/cgi-bin/trac.wsgi
 EOF
 '
   _mdbg 1  "After su command.."
-
-  sudo cat /tmp/xxxx.conf |  sed "s/\/test/\/${PROJECT}/g" |sed "s/test/${REALM}/g" > /tmp/_xxxx.conf
+  local tmpFile=/tmp/_xxxx.conf
+  [ -f $tmpFile ] && sudo rm -f $tmpFile
+  sudo cat /tmp/xxxx.conf |  sed "s/\/test/\/${PROJECT}/g" |sed "s/test/${REALM}/g" > $tmpFile
   sudo cp /tmp/_xxxx.conf  /etc/httpd/conf.d/${PROJECT}.conf
 # En changes
   [ -f /etc/httpd/conf.d/${PROJECT}.conf ] && _mok "Configuration file generated"

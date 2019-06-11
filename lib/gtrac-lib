@@ -9,6 +9,28 @@ declare -a VALID_LEVELS=( 0 1 2 3 4 5 6 21 ) # supported debug level by gtrac
 
 [ -f ./lib/common-lib ] && source ./lib/common-lib # Import low level methods
 
+
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _loadLibraries
+# parameters  :
+# Description : load gtrac libraries
+# Returns     : true, or exits if necessary
+#
+_loadLibraries()
+{
+    local libs=( "common-lib" "common-gen-lib" "common-custom-lib" "common-plugins-lib"  "plugins-lib" "gtrac-lib")
+    for lib in ${libs[@]}
+    do
+        if [ -f ${LIB_DIR}/${lib} ]
+        then
+            source ${LIB_DIR}/${lib} ||  { _mnok "Pb with library: $lib"; exit 3 ;}          # import shell library
+            _mok "Import library: $lib"          # import shell library
+        else
+          { _mnok "$lib not found"; exit 2 ;}
+        fi
+    done
+return 0
+}
 #--------------------------------------------------------------------------------------------------------------
 # Name        : _checkParam
 # parameters  : command line paramters
@@ -64,7 +86,7 @@ _checkParam()
           -d|--debug)
                     if ! _isInArray VALID_LEVELS $2
                     then
-                      { _mnok "Invalid debug level : $2 ,supported one's are 1 2 3 4 5 6 21" ;exit 3; }   # no
+                       _die "Invalid debug level : $2 ,supported one's are 1 2 3 4 5 6 21"
                     fi
                     { DEBUG=$2;shift;shift;_checkParam $*; }
           ;;

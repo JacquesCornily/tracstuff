@@ -4,8 +4,31 @@
 # Date        : 30 avril 2019
 # Description : Common methode to install and configure a trac plugin library
 # Version     : 1.1
-#-----------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _setSections
+# parameters  : sections necessary in trac.ini
+# Description : Configure section's plugins in trac.ini
+# Returns     :
+#
+_setSections()
+{
+ _mdbg 1  "-- Enter _setSections"
+  for hashName in  $*
+  do
+     _mdbg 2 "Processing $hashName now"
+     var=$(declare -p "$hashName")
+     eval "declare -A _hash="${var#*=}
+     _mdbg 3 "Found ${#_hash[@]} elements in $hashName"
 
+     for option in "${!_hash[@]}"
+     do
+         _mdbg 2  "[${hashName}] add $option = ${_hash["$option"]} in trac.ini"      # Keep previous index logic
+         _setOptionInTracIniSection "${hashName}" "$option" "${_hash[$option]}"
+     done
+  done
+ _mdbg 1  "-- Leave _setSections"
+}
 #--------------------------------------------------------------------------------------------------------------
 # Name        : _setTracIniPlugin
 # parameters  : plugin's name
@@ -14,37 +37,20 @@
 #
 _setTracIniPlugin()
 {
-  pluginName=$1
-#   found=0
+  local pluginName=$1
    _mdbg 1  "-- Enter _setTracIniPlugin"
    _minf "Configure $pluginName with trac-admin"
     [ -f $TRAC_INI ] && sudo chown apache:apache $TRAC_INI
     if _isInHash METHODS_PLUGINS ${pluginName}
     then
         sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
-        _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${pluginName}"]} methode"
-      ${METHODS_PLUGINS["${pluginName}"]} && _mdbg 2  "$pluginName customized with ${METHODS_PLUGINS["${pluginName}"]} method"
-      _installPluginPackage  "${pluginName}"
-
+        _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${pluginName}"]} method"
+        ${METHODS_PLUGINS["${pluginName}"]} && _mdbg 2  "$pluginName customized with ${METHODS_PLUGINS["${pluginName}"]} method"
+        _installPluginPackage  "${pluginName}"
     fi
-    return 0
+  _mdbg 1  "-- Leave _setTracIniPlugin"
+  return 0
 }
-#    for methodHandler in ${!METHODS_PLUGINS[@]}
-#    do
-#       sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | tee --append $LOG_FILE >/dev/null
-#      _mdbg 2  "Compare ${methodHandler} with ${pluginName}"
-#      if [ "${methodHandler}" == "${pluginName}" ]
-#      then
-#            _mdbg 2  "$pluginName will be be processed by ${METHODS_PLUGINS["${methodHandler}"]} methode"
-#
-#            ${METHODS_PLUGINS["${methodHandler}"]}
-#            _installPluginPackage  "${pluginName}"
-#            found=1
-#      fi
-#    done
-#    [ "${found}" == "0" ] && _mnok "Invalid plugin name $pluginName found=$found"
-#    _mdbg 1  "-- Leave _setTracIniPlugin"
-
 #--------------------------------------------------------------------------------------------------------------
 # Name        : _backupTracIni
 # parameters  :
@@ -53,10 +59,11 @@ _setTracIniPlugin()
 #
 _backupTracIni() #
 {
+    local timeStamp=$(_getTimeStamp)
+    local tracIniCopy=${TRAC_INI}.${timeStamp}
    _mdbg 1  "-- Enter _backupTracIni"
    _minf "Backup $TRAC_INI"
-   timeStamp=$(_getTimeStamp)
-   tracIniCopy=${TRAC_INI}.${timeStamp}
+
    sudo cp ${TRAC_INI} ${tracIniCopy}           || _mnok " Pb copying  ${TRAC_INI} -> ${tracIniCopy}"
    _mok "Made a copy of trac.ini in ${tracIniCopy}"
    sudo chmod 666 ${tracIniCopy}               &&  _mdbg 1  "Change to 666 permission for ${tracIniCopy}"
@@ -73,8 +80,8 @@ _backupTracIni() #
 _installPluginPackage()
 {
   _mdbg 1  "-- Enter _installPluginPackage"
-  pluginName=$1
-  installType="easyinstall"
+  local pluginName=$1
+  local installType="easyinstall"
   #[ "$2" != "" ] &&  installType=$2
   _mdbg 2  "Enter _installPluginPackage"
   _mdbg 2  "$pluginName install with $installType"
@@ -116,9 +123,9 @@ return 0
 #
 _setOptionInTracIniSection()
 {
- section="$1"    # e.g [components]
- key="$2"        # key = value
- value=$3
+ local section="$1"    # e.g [components]
+ local key="$2"        # key = value
+ local value=$3
  _mdbg 6  "Enter _setOptionInTracIniSection"
  _mdbg 6  "$section $key $value to add to trac.ini"
  sudo rm -f /tmp/$0.trac-admin

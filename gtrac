@@ -1,9 +1,8 @@
 #!/bin/bash
 
-[ "$1" == "" ] && _mnok "Project name missing as argument" && exit 3
-VERSION="0.8d"
+[ "$1" == "" ] && _die "Project name missing as argument"
 DEBUG=0
-VERBOSE=0
+VERBOSE=1
 VALID_PARAM=1
 
 glib=$HOME/tools/lib/gtrac-lib
@@ -12,7 +11,8 @@ glib=$HOME/tools/lib/gtrac-lib
 _checkParam $* && VALID_PARAM=$?
 
 FAST_CONFIG=0   # 1 Skip package installation
-TRAC_DIR=/var/lib/trac
+#TRAC_DIR=/var/lib/trac
+TRAC_DIR=/srv
 PROJECT_DIR=${TRAC_DIR}/${PROJECT}
 PROJECT_URL="http://$(uname -n)/${PROJECT}/"
 HTML_TRAC_DIR=/var/www/html/trac
@@ -25,6 +25,7 @@ HTDOCS_DIR=${PROJECT_DIR}/htdocs
 LOGO_FILE=${HOME}/tools/data/${PROJECT}/${PROJECT}.png
 ICO_FILE=${HOME}/tools/data/${PROJECT}/${PROJECT}.ico
 HTML_SITE_FILE="${HOME}/tools/data/${PROJECT}/site.html"
+HTML_THEME_FILE="${HOME}/tools/data/${PROJECT}/theme.html"
 CSS_SITE_FILE="${HOME}/tools/data/${PROJECT}/style.css"
 SRC_MISC_LOG_DIR=${HOME}/tools/data/misc-logo
 PROJECT_TEMPLATES_DIR=$PROJECT_DIR/templates
@@ -32,7 +33,7 @@ IMPORT_WIKI_PAGES_DIR=${HOME}/tools/data/${PROJECT}/wiki #  txt Wiki pages to im
 LIB_DIR=${HOME}/tools/lib
 PYTHON_EGGS_DIR="/usr/lib/python2.7/site-packages"
 TRACLOG_FILE=${PROJECT_DIR}/log/${PROJECT}.log
-GIT_REPO_DIR=/home/jdum/gtrac/.git
+GIT_REPO_DIR=/srv/gtrac.git
 declare -A USERS=( [admin]="admin" [jdum]="123password" [ronan]="guerin" )
 
 GEN_FLAG=1                 # proceed to the trac generation project
@@ -40,21 +41,32 @@ CUSTOMIZATION_FLAG=1       # customization of the trac project
 PLUGINS_FLAG=1             # configure plugins or not
 POST_PLUGIN_CUSTOM_FLAG=1  # make customization for some plugins
 START_TIME=$(date +%s)
+
 #.------------------------------------------------------------------
 #--MAIN-------------------------------------------------------------
 #-------------------------------------------------------------------
-declare -a libraries=( "common-lib" "common-gen-lib" "common-custom-lib" "common-plugins-lib"  "plugins-lib" "gtrac-lib")
 
-for lib in ${libraries[@]}
+
+# _loadLibraries && _mok "All libraries successfully imported"
+
+declare -a  libs=( "common-lib" "common-gen-lib" "common-custom-lib" "common-plugins-lib"  "plugins-lib" "gtrac-lib")
+for lib in ${libs[@]}
 do
-
-  [ -f ${LIB_DIR}/${lib} ]  && source ${LIB_DIR}/${lib} && _mok "Import library: $lib"          # import shell library
+    if [ -f ${LIB_DIR}/${lib} ]
+    then
+        source ${LIB_DIR}/${lib} ||  _die "Pb with importing library: $lib"        # import shell library
+        _mok "Import library: $lib"          # import shell library
+    else
+         _die "$lib not found"
+    fi
 done
 
-_setLogging      &&  _mok "Logging activated for $0"                # Initialize logging
+_setLogging    || _mnok "Can't set logging for $0"
+_mok "Logging activated for $0"                # Initialize logging
+
+selinuxenabled || _die "Please disable selinux"
 
 _mdbg 1 "VERBOSE=$VERBOSE VALID_PARAP=$VALID_PARAM PROJECT=$PROJECT DEBUG=$DEBUG"
-[ "$1" == "" ]  && _mnok " No project argument " && exit 3
 
 if [ "${GEN_FLAG}" == "1" ]
 then
@@ -67,7 +79,7 @@ then
 
     # Generate the trac project and configure user's project
 
-    _create_project  && _mok "The project ${PROJECT} has been generated"
+    _create_project  && _mok "The project ${PROJECT} has been created"
 
     sudo trac-admin ${PROJECT_DIR} upgrade   2>&1 | tee --append $LOG_FILE >/dev/null && _mok "Trac upgrade on $PROJECT_DIR"
     sudo systemctl restart httpd
@@ -78,25 +90,28 @@ fi
 if [ "${CUSTOMIZATION_FLAG}" == "1" ]
 then
 
-  _minf  "-- Starting ${PROJECT} customization ---------------------------------------------------"
+  _minf  "-- Starting ${PROJECT} trac customization ---------------------------------------------------"
+
+   _minf "Found ${#CUSTOM_METHODS[@]} methods to configure trac instance"
 
   for customMethod in "${CUSTOM_METHODS[@]}"
   do
-    _minf "available method ${customMethod} "
+    _mdbg 1  "available method ${customMethod} "
   done
 
-  sudo systemctl stop httpd.service && _mok "httpd Web server stopped" && _mok "Apache stopped"
-  _mdbg 1  "Trac project $PROJECT customization"
+  sudo systemctl stop httpd.service && _mok "httpd Web server stopped"
+
   _backupTracIni && _minf "$TRAC_INI is backed up"
 
    for customMethod in "${CUSTOM_METHODS[@]}"
    do
-      _mdbg 2  "Calling ${customMethod} method for customization"
+      _mdbg 2  "Calling ${customMethod} method for trac customization"
       ${customMethod} && _mdbg 2 "Custom method ${customMethod} was sucessfull"
   done
 
   [ -f $TRAC_INI ] && sudo chown apache:apache $TRAC_INI && sudo sudo chmod 666 $TRAC_INI
-  sudo systemctl start httpd.service && _mok "httpd Web server started" && _mok "Apache restarted"
+  sudo systemctl start httpd.service && _mok "httpd Web server started"
+
   _minf  "-- End ${PROJECT} customization ---------------------------------------------------"
 fi
 # Begin plugin configuration ----------------------------------------------------------------
@@ -104,36 +119,44 @@ fi
 if [ "${PLUGINS_FLAG}" == "1" ]
 then
   _minf "-- Starting ${PROJECT} plugins installation and configuration -----------------------------"
-  sudo systemctl stop httpd && _mok "httpd Web server stopped" && _mok "Apache stopped"
+  sudo systemctl stop httpd && _mok "httpd Web server stopped"
   _backupTracIni
+
+  _mdbg 1 "Found ${#SUPPORTED_PLUGINS[@]} plugin methods to declare  plugins in trac.ini"
+
   for plugin in ${SUPPORTED_PLUGINS[@]}
   do
-  _setTracIniPlugin "$plugin" &&  _mdbg 2  "_setTracIniPlugin $plugin"
+      _setTracIniPlugin "$plugin" &&  _mdbg 2  "_setTracIniPlugin with $plugin"
   done
-  sudo systemctl start httpd  && _mok "httpd Web server started" && _mok "Apache restarted"
+  sudo systemctl start httpd  && _mok "httpd Web server started"
   _minf  "-- Finished ${PROJECT} plugins installation  -----------------------------"
 fi
+
 # Begin post plugin customization ----------------------------------------------------------------
 #
 if [ "${POST_PLUGIN_CUSTOM_FLAG}" == "1" ]
 then
 
-    _minf "-- Starting ${PROJECT} plugins customization -----------------------------"
-    for customPluginMethod in ${POST_PLUGIN_CUSTOM_METHODS[@]}
-    do
+    _minf "-- Starting ${PROJECT} plugins post customization -----------------------------"
 
-          ${customPluginMethod} && _minf "Custom method is ${customPluginMethod}"
+    _minf "Found ${#POST_PLUGIN_CUSTOM_METHODS[@]} post custom plugin method to customize trac instance"
+
+    for postCustomPluginMethod in ${POST_PLUGIN_CUSTOM_METHODS[@]}
+    do
+          ${postCustomPluginMethod} && _mdbg 1  "Post custom plugin method ${postCustomPluginMethod} successfull"
     done
     _minf "-- Finished ${PROJECT} plugins customization -----------------------------"
 fi
 #sudo systemctl stop httpd
 
 #_hack
+
 sudo trac-admin "${PROJECT_DIR}" upgrade 2>&1 | sudo tee --append $LOG_FILE >&1 >/dev/null && _mdbg 3 "Last ${PROJECT_DIR} upgrade"
 
 [ -f $TRACLOG_FILE ] && sudo chown apache:apache $TRACLOG_FILE && _mdbg 3 "Changing ownership"
 
-sudo trac-admin ${PROJECT_DIR} config set "components" 'talm_importer.importer.*' "enabled" 2>&1 >/dev/null && _mdbg 3 "Hack done"
+sudo trac-admin ${PROJECT_DIR} config set "components" 'talm_importer.importer.*' "enabled" 2>&1 >/dev/null || _die "Hack for talm.importer failed"
+_mdbg 3 "Hack done"
 
 _mok "$(_upperCase $PROJECT) generation complete, you can access it at : $PROJECT_URL"
 

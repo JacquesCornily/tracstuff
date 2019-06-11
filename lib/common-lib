@@ -27,16 +27,16 @@ _getDateLine()
 #
 _colorString()
 {
-	color="$1"
-	string="$2"
-	escColorValue=${COLORS["$color"]}
+	local color="$1"
+	local string="$2"
+	local escColorValue=${COLORS["$color"]}
 	# escape sequence
-	escStart="\033["
-	escEnd="\033[0m"
+	local escStart="\033["
+	local escEnd="\033[0m"
 	# char formating
-	bold=';1'
-	underlined=4
-	flashing=1
+	local bold=';1'
+	local underlined=4
+	local flashing=1
 	echo -ne "${escStart}${escColorValue};${escColorValue}${bold}m${string}${escEnd}"
   return 0
 }
@@ -48,23 +48,27 @@ _colorString()
 #
 _displayColorTag()
 {
-	   logfile="/tmp/$(basename ${0}).log"
-     tag="${1}"
-     text="${2}"
+	   local logfile="/tmp/$(basename ${0}).log"
+     local tag="${1}"
+     local text="${2}"
 
      case ${tag} in
-
-         NOK)   echo -ne "$(_getDateLine)[$(_colorString 'red' $tag)]  ${text}" | tee --append $logfile
+         #NOK)   echo -ne "$(_getDateLine)[$(_colorString 'red' $tag)]  ${text}" | tee --append $logfile
+         NOK)    printf " %+1s %+30s\n " "$(_getDateLine)[$(_colorString 'red' $tag)]" "${text}" | tee --append $logfile
          ;;
-         OK)    echo -ne "$(_getDateLine)[$(_colorString 'green' $tag)]  ${text}" | tee --append $logfile
+         #OK)    echo -ne "$(_getDateLine)[$(_colorString 'green' $tag)]  ${text}" | tee --append $logfile
+         OK)     printf " %+1s %+30s\n " "$(_getDateLine)[$(_colorString 'green' $tag)]" "${text}" | tee --append $logfile
          ;;
          INFO)  if [ $VERBOSE -eq 1 ]
                 then
-                     if [ _isInArray VALID_LEVELS ${DEBUG} ]
+                     _isInArray VALID_LEVELS ${DEBUG}; returnValue=$?
+                     if [ $returnValue -eq 0 ]
                      then
-                       echo -ne "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]  ${text}" | tee --append $logfile
+                         #echo -ne "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]  ${text}" | tee --append $logfile
+                         printf " %+1s %+30s\n " "$(_getDateLine)[$(_colorString 'brown_orange' $tag)]" "${text}" | tee --append $logfile
                      fi
-                fi
+              fi
+        ;;
 	   esac
      return 0
 }
@@ -115,14 +119,15 @@ _minf()
 #--------------------------------------------------------------------------------------------------------------
 # Name        : _mdbg
 # Parameters  : the level of debug, the debug message
-# Description : format debug messages, with colored DEBUG tagged based upon debug level
+# Description : format debug messages, with colored DEBUG tagbased upon debug level
 # Returns     : true, exit if invalid debug level
 #
 _mdbg()
 {
-	msgDebugLevel=$1
-	message="$2"
-  thisTag='DEBUG'
+	local msgDebugLevel=$1
+	local message="$2"
+  local thisTag='DEBUG'
+  local color
 
   if [ ${msgDebugLevel} -le ${DEBUG} ]
   then
@@ -135,8 +140,8 @@ _mdbg()
 			21)  color="brown_orange"
 			 ;;
 	    esac
-      { coloredTag=$(_colorString $color "$thisTag");echo -ne "$(_getDateLine)["$coloredTag"]  ${message}" | tee --append $logfile ;echo;}
-
+      { coloredTag=$(_colorString $color "$thisTag");printf " %+1s %+30s\n " "$(_getDateLine)[$coloredTag]" "${message}" | tee --append $logfile ;echo;}
+      #{ coloredTag=$(_colorString $color "$thisTag");printf "%+1s  %+22s" "$(_getDateLine)["$coloredTag"]" "${message}" | tee --append $logfile ;echo;}
 		  return 0
 	fi
 }
@@ -149,8 +154,8 @@ _mdbg()
 _setLogging()
 {
 	_mdbg 2 "-- Enter _setLogging"
-  logfile=/tmp/$(basename ${0}).log
-  timestamp=$(_getTimeStamp)
+  local logfile=/tmp/$(basename ${0}).log
+  local timestamp=$(_getTimeStamp)
   [ -f ${logfile} ] && mv ${logfile} "${logfile}.$(_getTimeStamp)" && _minf "logfile ${logfile} is backuped in ${logfile}.$timestamp"
   echo "# $(_getDateLine) $(basename $0) logging started"> ${logfile}
 	_mdbg 2 "-- Leave _setLogging"
@@ -173,6 +178,7 @@ _upperCase()
 # Return      : true if successfull
 #
 _isInArray () {
+
     local array="$1[@]"
     local seeking=$2
     local in=1
@@ -197,6 +203,34 @@ _isInHash() {
         * ) return 1 ;;
       esac";
 }
-
-#_isInArray arr "a b"  && echo yes || echo no    # no
-#_isInArray arr "d e"  && echo yes || echo no    # yes
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _die
+# Parameters  : a message
+# Description : return an error message with an exit code, and exits
+# Return      : exits
+#
+_die()
+{
+  local error=$?
+  local message="$1 with error=$error"
+  _mnok "$message"
+  exit $error
+}
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _hput
+# Parameters  : hash name, key and value
+# Description : fill a hash with key+value
+# Return      : exits
+#
+_hput() {
+    eval "$1""$2"='$3'
+}
+#--------------------------------------------------------------------------------------------------------------
+# Name        : _hget
+# Parameters  : hash name, key and value
+# Description : get a value associated to a key in a hash
+# Return      : exits
+#
+_hget() {
+    eval echo '${'"$1$2"'#hash}'
+}
